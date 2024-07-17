@@ -9,7 +9,7 @@ class Board():
     def __init__(self, boardDimensions):
         # board is made of hexagonal hexes and their vertices
         self.hexes = []
-        self.vertices = None
+        self.vertices = []
 
         self.width, self.height = boardDimensions
         self.hexSize = 50
@@ -26,22 +26,44 @@ class Board():
         self.hexes.append(newHextile)
         index = 1
 
+        # adding land hexes
         for n in range(2):
-            new_hexes = []
+            landHexes = []
             for hextile in self.hexes:
                 for direction in range(6):
                     neighbor = hex_neighbor(hextile.hexCoordinate, direction)
-                    if all(neighbor != h.hexCoordinate for h in self.hexes) and all(neighbor != h.hexCoordinate for h in new_hexes):
+                    if all(neighbor != h.hexCoordinate for h in self.hexes) and all(neighbor != h.hexCoordinate for h in landHexes):
                         if index < len(resourceList):
                             newHextile = Hextile()
                             newHextile.hexCoordinate = neighbor
                             newHextile.resource, newHextile.value = resourceList[index]
-                            new_hexes.append(newHextile)
+                            landHexes.append(newHextile)
                             index += 1
-            self.hexes.extend(new_hexes)
+            self.hexes.extend(landHexes)
         
-        print("REACHED HERE")
-        print(self.hexes)
+        # adding sea hexes
+        seaHexes = []
+        for hextile in self.hexes:
+            for direction in  range(6):
+                neighbor = hex_neighbor(hextile.hexCoordinate, direction)
+                if all(neighbor != h.hexCoordinate for h in self.hexes):
+                    newHextile = Hextile()
+                    newHextile.hexCoordinate = neighbor
+                    newHextile.resource = "SEA"
+                    seaHexes.append(newHextile)
+        self.hexes.extend(seaHexes)
+
+        # adding all vertices
+        newVertices = []
+        for hextile in self.hexes:
+            if hextile.resource != "SEA":
+                corners = polygon_corners(self.layout, hextile.hexCoordinate)
+                for point in corners:
+                    if all(point != v.coordinates for v in self.vertices):
+                        newVertex = Vertex()
+                        newVertex.coordinates = point
+                        newVertices.append(newVertex)
+        self.vertices.extend(newVertices)
 
     def getRandomResourceList(self):
         "Returns a random list of resource type and value pairs"

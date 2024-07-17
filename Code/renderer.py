@@ -30,23 +30,28 @@ class Renderer():
 
     def displayState(self):
         # background colour
-        self.window.fill((255, 255, 255))
+        self.window.fill((102, 178, 255))
 
         # drawing hexes
         for hextile in self.board.hexes:
             corners = polygon_corners(self.board.layout, hextile.hexCoordinate)
             center = hex_to_pixel(self.board.layout, hextile.hexCoordinate)
-            # print(f"corners: {corners}\n")
             hextileColour = self.hexColourDict[hextile.resource]
             r = hextileColour[0]
             g = hextileColour[1]
             b = hextileColour[2]
+            # actual hexagon
             pygame.draw.polygon(self.window, (r, g, b), corners, width=0)
-            if hextile.resource != "DESERT":
+            # number inside hexagon
+            if hextile.resource != "DESERT" and hextile.resource != "SEA":
                 if hextile.value == 6 or hextile.value == 8:
                     text_surface = self.font.render(str(hextile.value), True, (255, 0, 0))
                 else:
                     text_surface = self.font.render(str(hextile.value), True, (0, 0, 0))
                 self.window.blit(text_surface, (center.x -11, center.y -9))
+        
+        # drawing vertices
+        for vertex in self.board.vertices:
+            pygame.draw.circle(self.window, (0, 0, 0), vertex.coordinates, 5)
         
         pygame.display.update()

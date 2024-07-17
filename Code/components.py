@@ -10,6 +10,8 @@ class Hextile():
         self.resource = None
         self.value = None
 
+        self.hasPort = False
+
 class Vertex():
     """
     xxx
