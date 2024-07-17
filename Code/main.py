@@ -7,13 +7,15 @@ def main():
 
     myRenderer = Renderer()
 
+    myRenderer.displayState()
+
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
         
-        myRenderer.displayScreen()
+        # myRenderer.displayState()
     
     pygame.quit()
 

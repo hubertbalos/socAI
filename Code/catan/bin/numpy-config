@@ -1,4 +1,4 @@
-#!/Users/hubertbalos/Project/Code/catan/bin/python3.12
+#!/Users/hubertbalos/Project/SettlersOfCatan/Code/catan/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys
