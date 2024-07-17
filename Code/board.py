@@ -4,7 +4,7 @@ import numpy as np
 
 class Board():
     """
-    xxx
+    Contains the board state
     """
     def __init__(self, boardDimensions):
         # board is made of hexagonal hexes and their vertices
