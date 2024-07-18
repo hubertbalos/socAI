@@ -33,9 +33,9 @@ class Renderer():
         self.window.fill((102, 178, 255))
 
         # drawing hexes
-        for hextile in self.board.hexes:
-            corners = polygon_corners(self.board.layout, hextile.hexCoordinate)
-            center = hex_to_pixel(self.board.layout, hextile.hexCoordinate)
+        for coord, hextile in self.board.hexes.items():
+            corners = polygon_corners(self.board.layout, coord)
+            center = hex_to_pixel(self.board.layout, coord)
             hextileColour = self.hexColourDict[hextile.resource]
             r = hextileColour[0]
             g = hextileColour[1]
@@ -48,10 +48,13 @@ class Renderer():
                     text_surface = self.font.render(str(hextile.value), True, (255, 0, 0))
                 else:
                     text_surface = self.font.render(str(hextile.value), True, (0, 0, 0))
-                self.window.blit(text_surface, (center.x -11, center.y -9))
+                self.window.blit(text_surface, (center.x -11, center.y -11))
+            # if hextile.resource == "SEA":
+            #     text_surface = self.font.render(str(len(hextile.vertexChildren)), True, (0, 0, 0))
+            #     self.window.blit(text_surface, (center.x -11, center.y -9))
         
         # drawing vertices
-        for vertex in self.board.vertices:
-            pygame.draw.circle(self.window, (0, 0, 0), vertex.coordinates, 5)
+        for coord in self.board.vertices:
+            pygame.draw.circle(self.window, (0, 0, 0), coord, 5)
         
         pygame.display.update()

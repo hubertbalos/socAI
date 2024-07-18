@@ -8,8 +8,8 @@ class Board():
     """
     def __init__(self, boardDimensions):
         # board is made of hexagonal hexes and their vertices
-        self.hexes = []
-        self.vertices = []
+        self.hexes = {}
+        self.vertices = {}
 
         self.width, self.height = boardDimensions
         self.hexSize = 50
@@ -19,51 +19,88 @@ class Board():
     
     def generateBoard(self):
         resourceList = self.getRandomResourceList()
+        landHexes = self.getLandHexes(resourceList)
+        seaHexes = self.getSeaHexes(landHexes)
+        vertices = self.getVertices(landHexes, seaHexes)
 
-        newHextile = Hextile()
-        newHextile.hexCoordinate = Hex(0, 0, 0)
-        newHextile.resource, newHextile.value = resourceList[0]
-        self.hexes.append(newHextile)
-        index = 1
-
-        # adding land hexes
-        for n in range(2):
-            landHexes = []
-            for hextile in self.hexes:
-                for direction in range(6):
-                    neighbor = hex_neighbor(hextile.hexCoordinate, direction)
-                    if all(neighbor != h.hexCoordinate for h in self.hexes) and all(neighbor != h.hexCoordinate for h in landHexes):
-                        if index < len(resourceList):
-                            newHextile = Hextile()
-                            newHextile.hexCoordinate = neighbor
-                            newHextile.resource, newHextile.value = resourceList[index]
-                            landHexes.append(newHextile)
-                            index += 1
-            self.hexes.extend(landHexes)
-        
-        # adding sea hexes
-        seaHexes = []
-        for hextile in self.hexes:
-            for direction in  range(6):
-                neighbor = hex_neighbor(hextile.hexCoordinate, direction)
-                if all(neighbor != h.hexCoordinate for h in self.hexes):
-                    newHextile = Hextile()
-                    newHextile.hexCoordinate = neighbor
-                    newHextile.resource = "SEA"
-                    seaHexes.append(newHextile)
-        self.hexes.extend(seaHexes)
+        self.hexes.update(landHexes)
+        self.hexes.update(seaHexes)
+        self.vertices.update(vertices)
+    
+    def getVertices(self, landHexes, seaHexes):
+        "Return a dictionary containing the hexgrid vertices"
 
         # adding all vertices
-        newVertices = []
-        for hextile in self.hexes:
-            if hextile.resource != "SEA":
-                corners = polygon_corners(self.layout, hextile.hexCoordinate)
-                for point in corners:
-                    if all(point != v.coordinates for v in self.vertices):
-                        newVertex = Vertex()
-                        newVertex.coordinates = point
-                        newVertices.append(newVertex)
-        self.vertices.extend(newVertices)
+        newVertices = {}
+        for coord, hextile in landHexes.items():
+            corners = polygon_corners(self.layout, coord)
+            for vertex in corners:
+                hextile.vertexChildren.append(vertex)
+                if vertex not in newVertices:
+                    newVertex = Vertex()
+                    newVertices[vertex] = newVertex
+        
+        # adding vertex children and hex parents
+        for coord, hextile in landHexes.items():
+            corners = polygon_corners(self.layout, coord)
+            for vertex in corners:
+                newVertices[vertex].hexParents.append(hextile)
+        
+        for coord, hextile in seaHexes.items():
+            corners = polygon_corners(self.layout, coord)
+            for vertex in corners:
+                if vertex in newVertices:
+                    hextile.vertexChildren.append(vertex)
+                    newVertices[vertex].hexParents.append(hextile)
+        
+        return newVertices
+
+    def getLandHexes(self, resourceList):
+        "Returns a dictionary containing the land hexgrid"
+        # adding the first hex at the origin
+        landHexes = {}
+        newHextile = Hextile()
+        newHextile.resource, newHextile.value = resourceList.pop()
+        landHexes[Hex(0, 0, 0)] = newHextile
+
+        # building the remaining hexes around the origin
+        for n in range(2):
+            newLandHexes = {}
+            for coord, hextile in landHexes.items():
+                for direction in range(6):
+                    neighbor = hex_neighbor(coord, direction)
+                    if neighbor not in hextile.hexNeighbors:
+                        hextile.hexNeighbors.append(neighbor)
+                    if all(neighbor != coord for coord in landHexes) and all(neighbor != coord for coord in newLandHexes): 
+                        newHextile = Hextile()
+                        newHextile.resource, newHextile.value = resourceList.pop()
+                        newLandHexes[neighbor] = newHextile
+            landHexes.update(newLandHexes)
+
+        return landHexes
+
+    
+    def getSeaHexes(self, landHexes):
+        "Returns a dictionary containg the sea hexgrid"
+        # building the sea hexes surrounding the current land hexgrid
+        seaHexes = {}
+        for coord, hextile in landHexes.items():
+            for direction in  range(6):
+                neighbor = hex_neighbor(coord, direction)
+                if all(neighbor != coord for coord in landHexes):
+                    newHextile = Hextile()
+                    newHextile.resource = "SEA"
+                    seaHexes[neighbor] = newHextile
+
+        for coord, hextile in seaHexes.items():
+            for direction in range(6):
+                    neighbor = hex_neighbor(coord, direction)
+                    if neighbor in landHexes or neighbor in seaHexes:
+                        seaHexes[coord].hexNeighbors.append(neighbor)
+        
+        assert(len(seaHexes) == 18)
+
+        return seaHexes
 
     def getRandomResourceList(self):
         "Returns a random list of resource type and value pairs"
@@ -85,6 +122,10 @@ class Board():
         resourceList.insert(np.random.randint(0, len(resourceList)), ("DESERT", None))
 
         return resourceList
+    
+    def assignPorts(self, seaHexes):
+        None
+
 
 
 
