@@ -53,6 +53,19 @@ class Board():
                     hextile.vertexChildren.append(vertex)
                     newVertices[vertex].hexParents.append(hextile)
         
+        # computing vertex neighbors
+        keys = list(newVertices.keys())
+        radius = math.sqrt((keys[1].x - keys[0].x)**2 + (keys[1].y - keys[0].y)**2) * 1.01
+        for currentVertex in newVertices:
+            for otherVertex in newVertices:
+                if otherVertex != currentVertex:
+                    distance = math.sqrt((otherVertex.x - currentVertex.x)**2 + (otherVertex.y - currentVertex.y)**2)
+                    if distance <= radius:
+                        newVertices[currentVertex].vertexNeighbors.append(otherVertex)
+
+        # for vertex in newVertices:
+        #     print(len(newVertices[vertex].vertexNeighbors))
+        
         return newVertices
 
     def getLandHexes(self, resourceList):
