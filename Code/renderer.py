@@ -25,6 +25,8 @@ class Renderer():
                            "SEA":(153,204,255),
                            "3:1":(0,0,0)}
         
+        self.pipNumberDict = {2:1, 3:2, 4:3, 5:4, 6:5, 8:5, 9:4, 10:3, 11:2, 12:1}
+        
         self.font = pygame.font.SysFont(None, 40)
 
         self.displayState()
@@ -45,10 +47,25 @@ class Renderer():
             # number inside hexagon
             if hextile.resource != "DESERT" and hextile.resource != "SEA":
                 if hextile.value == 6 or hextile.value == 8:
-                    text_surface = self.font.render(str(hextile.value), True, (255, 0, 0))
+                    colour = (255, 0, 0)
                 else:
-                    text_surface = self.font.render(str(hextile.value), True, (0, 0, 0))
-                self.window.blit(text_surface, (center.x -11, center.y -11))
+                    colour = (0, 0, 0)
+                text_surface = self.font.render(str(hextile.value), True, colour)
+                text_rect = text_surface.get_rect()
+                text_rect.center = (center.x, center.y)
+                self.window.blit(text_surface, text_rect)
+
+                hextilePips = self.font.render(str(self.pipNumberDict[hextile.value] * "."), True, (0, 0, 0))
+                text_rect = hextilePips.get_rect()
+                text_rect.center = (center.x + 1, center.y + 8)
+                self.window.blit(hextilePips, text_rect)
+
+            if hextile.hasRobber:
+                pygame.draw.circle(self.window, (70, 70, 70), center, 20)
+                text_surface = self.font.render(str("R"), True, (255, 255, 255))
+                text_rect = text_surface.get_rect()
+                text_rect.center = (center.x, center.y)
+                self.window.blit(text_surface, text_rect)
             # if hextile.resource == "SEA" and hextile.hasPort == True:
             #     pygame.draw.circle(self.window, (0, 0, 255), center, 5)
         

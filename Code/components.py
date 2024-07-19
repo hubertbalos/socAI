@@ -15,6 +15,8 @@ class Hextile():
         self.hasPort = False
         self.portType = None
 
+        self.hasRobber = False
+
 class Vertex():
     """
     xxx

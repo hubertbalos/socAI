@@ -1,6 +1,7 @@
 from components import Hextile, Vertex
 from hexlib import *
 import numpy as np
+import random
 
 class Board():
     """
@@ -28,8 +29,8 @@ class Board():
         self.vertices.update(vertices)
     
     def getVertices(self, landHexes, seaHexes):
-        "Return a dictionary containing the hexgrid vertices"
-        
+        "Returns a dictionary containing the hexgrid vertices"
+
         # adding all vertices
         newVertices = {}
         for coord, hextile in landHexes.items():
@@ -77,6 +78,8 @@ class Board():
             # adding the first hex at the origin
             newHextile = Hextile()
             newHextile.resource, newHextile.value = resourceList.pop()
+            if newHextile.resource == "DESERT":
+                newHextile.hasRobber = True
             landHexes[Hex(0, 0, 0)] = newHextile
 
             # building the remaining hexes around the origin
@@ -88,6 +91,8 @@ class Board():
                         if all(neighbor != coord for coord in landHexes) and all(neighbor != coord for coord in newLandHexes): 
                             newHextile = Hextile()
                             newHextile.resource, newHextile.value = resourceList.pop()
+                            if newHextile.resource == "DESERT":
+                                newHextile.hasRobber = True
                             newLandHexes[neighbor] = newHextile
                 landHexes.update(newLandHexes)
             
@@ -96,6 +101,7 @@ class Board():
                 for direction in range(6):
                     neighbor = hex_neighbor(coord, direction)
                     hextile.hexNeighbors.append(neighbor)
+            
 
         return landHexes
     
@@ -157,8 +163,7 @@ class Board():
         portTypes = list(np.random.permutation([
             "ORE", "WHEAT", "WOOD", "BRICK", "SHEEP", "3:1", "3:1", "3:1", "3:1" ]))
         seaHexesList = list(seaHexes.keys())
-        randomCoord = np.random.randint(0, len(seaHexesList))
-        coord = seaHexesList.pop(randomCoord)
+        coord = random.choice(seaHexesList)
         seaHexes[coord].hasPort = True
         seaHexes[coord].portType = portTypes.pop()
         self.makeTwoVerticesPorts(seaHexes[coord], vertices)
@@ -177,15 +182,12 @@ class Board():
                     break
     
     def makeTwoVerticesPorts(self, seaHex, vertices):
-        randomIndex = np.random.randint(0, len(seaHex.vertexChildren))
-        coord = seaHex.vertexChildren[randomIndex]
+        coord = random.choice(seaHex.vertexChildren)
         vertices[coord].hasPort = True
         vertices[coord].portType = seaHex.portType
-        alreadySelectedIndex = randomIndex
         alreadySelectedCoord = coord
-        while alreadySelectedIndex == randomIndex or coord not in vertices[alreadySelectedCoord].vertexNeighbors:
-            randomIndex = np.random.randint(0, len(seaHex.vertexChildren))
-            coord = seaHex.vertexChildren[randomIndex]
+        while coord not in vertices[alreadySelectedCoord].vertexNeighbors:
+            coord = random.choice(seaHex.vertexChildren)
         vertices[coord].hasPort = True
         vertices[coord].portType = seaHex.portType
         
