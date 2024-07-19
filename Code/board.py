@@ -18,8 +18,7 @@ class Board():
         self.generateBoard()
     
     def generateBoard(self):
-        resourceList = self.getRandomResourceList()
-        landHexes = self.getLandHexes(resourceList)
+        landHexes = self.getLandHexes()
         seaHexes = self.getSeaHexes(landHexes)
         vertices = self.getVertices(landHexes, seaHexes)
 
@@ -30,7 +29,7 @@ class Board():
     
     def getVertices(self, landHexes, seaHexes):
         "Return a dictionary containing the hexgrid vertices"
-
+        
         # adding all vertices
         newVertices = {}
         for coord, hextile in landHexes.items():
@@ -69,29 +68,45 @@ class Board():
         
         return newVertices
 
-    def getLandHexes(self, resourceList):
+    def getLandHexes(self):
         "Returns a dictionary containing the land hexgrid"
-        # adding the first hex at the origin
         landHexes = {}
-        newHextile = Hextile()
-        newHextile.resource, newHextile.value = resourceList.pop()
-        landHexes[Hex(0, 0, 0)] = newHextile
+        while not self.isValidLandHexPlacement(landHexes) or len(landHexes) == 0:
+            landHexes.clear()
+            resourceList = self.getRandomResourceList()
+            # adding the first hex at the origin
+            newHextile = Hextile()
+            newHextile.resource, newHextile.value = resourceList.pop()
+            landHexes[Hex(0, 0, 0)] = newHextile
 
-        # building the remaining hexes around the origin
-        for n in range(2):
-            newLandHexes = {}
+            # building the remaining hexes around the origin
+            for n in range(2):
+                newLandHexes = {}
+                for coord, hextile in landHexes.items():
+                    for direction in range(6):
+                        neighbor = hex_neighbor(coord, direction)
+                        if all(neighbor != coord for coord in landHexes) and all(neighbor != coord for coord in newLandHexes): 
+                            newHextile = Hextile()
+                            newHextile.resource, newHextile.value = resourceList.pop()
+                            newLandHexes[neighbor] = newHextile
+                landHexes.update(newLandHexes)
+            
+            # adding hextile neighbors
             for coord, hextile in landHexes.items():
                 for direction in range(6):
                     neighbor = hex_neighbor(coord, direction)
-                    if neighbor not in hextile.hexNeighbors:
-                        hextile.hexNeighbors.append(neighbor)
-                    if all(neighbor != coord for coord in landHexes) and all(neighbor != coord for coord in newLandHexes): 
-                        newHextile = Hextile()
-                        newHextile.resource, newHextile.value = resourceList.pop()
-                        newLandHexes[neighbor] = newHextile
-            landHexes.update(newLandHexes)
+                    hextile.hexNeighbors.append(neighbor)
 
         return landHexes
+    
+    def isValidLandHexPlacement(self, landHexes):
+        for coord, hextile in landHexes.items():
+            if hextile.value == 6 or hextile.value == 8:
+                for neighbor in hextile.hexNeighbors:
+                    if abs(neighbor.q) != 3 and abs(neighbor.r) != 3 and abs(neighbor.s) != 3:
+                        if landHexes[neighbor].value == 6 or landHexes[neighbor].value == 8:
+                            return False
+        return True
 
     
     def getSeaHexes(self, landHexes):
@@ -106,11 +121,12 @@ class Board():
                     newHextile.resource = "SEA"
                     seaHexes[neighbor] = newHextile
 
+        # adding hextile neighbors
         for coord, hextile in seaHexes.items():
             for direction in range(6):
                     neighbor = hex_neighbor(coord, direction)
                     if neighbor in landHexes or neighbor in seaHexes:
-                        seaHexes[coord].hexNeighbors.append(neighbor)
+                        hextile.hexNeighbors.append(neighbor)
         
         assert(len(seaHexes) == 18)
 
