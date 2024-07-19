@@ -13,6 +13,7 @@ class Hextile():
         self.vertexChildren = []
 
         self.hasPort = False
+        self.portType = None
 
 class Vertex():
     """
@@ -23,3 +24,4 @@ class Vertex():
         self.hexParents = []
 
         self.hasPort = False
+        self.portType = None

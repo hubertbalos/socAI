@@ -16,13 +16,14 @@ class Renderer():
         self.window = pygame.display.set_mode(self.window_size)
         self.board = Board(self.window_size)
 
-        self.hexColourDict = {"ORE":(160,160,160), 
-                              "WHEAT":(255,255,0), 
-                              "WOOD":(0,102,0), 
-                              "BRICK":(153,0,0), 
-                              "SHEEP":(204,255,153), 
-                              "DESERT":(255,229,204),
-                              "SEA":(153,204,255)}
+        self.ColourDict = {"ORE":(160,160,160), 
+                           "WHEAT":(255,255,0), 
+                           "WOOD":(0,102,0), 
+                           "BRICK":(153,0,0), 
+                           "SHEEP":(204,255,153), 
+                           "DESERT":(255,229,204),
+                           "SEA":(153,204,255),
+                           "3:1":(0,0,0)}
         
         self.font = pygame.font.SysFont(None, 40)
 
@@ -31,12 +32,11 @@ class Renderer():
     def displayState(self):
         # background colour
         self.window.fill((102, 178, 255))
-
         # drawing hexes
         for coord, hextile in self.board.hexes.items():
             corners = polygon_corners(self.board.layout, coord)
             center = hex_to_pixel(self.board.layout, coord)
-            hextileColour = self.hexColourDict[hextile.resource]
+            hextileColour = self.ColourDict[hextile.resource]
             r = hextileColour[0]
             g = hextileColour[1]
             b = hextileColour[2]
@@ -49,12 +49,35 @@ class Renderer():
                 else:
                     text_surface = self.font.render(str(hextile.value), True, (0, 0, 0))
                 self.window.blit(text_surface, (center.x -11, center.y -11))
+            # if hextile.resource == "SEA" and hextile.hasPort == True:
+            #     pygame.draw.circle(self.window, (0, 0, 255), center, 5)
+        
             # if hextile.resource == "SEA":
             #     text_surface = self.font.render(str(len(hextile.vertexChildren)), True, (0, 0, 0))
-            #     self.window.blit(text_surface, (center.x -11, center.y -9))
-        
+            #     self.window.blit(text_surface, (center.x -11, center.y -11))
+        self.drawPorts()
+                
         # drawing vertices
-        for coord in self.board.vertices:
-            pygame.draw.circle(self.window, (0, 0, 0), coord, 5)
+        # for coord, vertex in self.board.vertices.items():
+        #     if vertex.hasPort == True:
+        #         pygame.draw.circle(self.window, (0, 0, 255), coord, 5)
+        #     else:
+        #         pygame.draw.circle(self.window, (0, 0, 0), coord, 5)
         
-        pygame.display.update()
+        pygame.display.update()     
+    
+    def drawPorts(self):
+        for coord, hextile in self.board.hexes.items():
+            center = hex_to_pixel(self.board.layout, coord)
+            if hextile.hasPort == True:
+                Colour = self.ColourDict[hextile.portType]
+                r = Colour[0]
+                g = Colour[1]
+                b = Colour[2]
+                for vertex in hextile.vertexChildren:
+                    if self.board.vertices[vertex].hasPort == True:
+                        pygame.draw.line(self.window, (102, 51, 0), center, vertex, 5)
+                pygame.draw.circle(self.window, (r, g, b), center, 10)
+                
+
+                

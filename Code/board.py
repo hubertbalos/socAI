@@ -24,6 +24,7 @@ class Board():
         vertices = self.getVertices(landHexes, seaHexes)
 
         self.hexes.update(landHexes)
+        self.assignPorts(seaHexes, vertices)
         self.hexes.update(seaHexes)
         self.vertices.update(vertices)
     
@@ -136,11 +137,50 @@ class Board():
 
         return resourceList
     
-    def assignPorts(self, seaHexes):
-        None
+    def assignPorts(self, seaHexes, vertices):
+        portTypes = list(np.random.permutation([
+            "ORE", "WHEAT", "WOOD", "BRICK", "SHEEP", "3:1", "3:1", "3:1", "3:1" ]))
+        seaHexesList = list(seaHexes.keys())
+        randomCoord = np.random.randint(0, len(seaHexesList))
+        coord = seaHexesList.pop(randomCoord)
+        seaHexes[coord].hasPort = True
+        seaHexes[coord].portType = portTypes.pop()
+        self.makeTwoVerticesPorts(seaHexes[coord], vertices)
+        ports = 1
+        traversedSeaTiles = [coord]
+        while ports < 9:
+            for neighbor in seaHexes[coord].hexNeighbors:
+                if neighbor in seaHexes and neighbor not in traversedSeaTiles:
+                    if len(traversedSeaTiles) % 2 == 0:
+                        seaHexes[neighbor].hasPort = True
+                        seaHexes[neighbor].portType = portTypes.pop()
+                        self.makeTwoVerticesPorts(seaHexes[neighbor], vertices)
+                        ports += 1
+                    traversedSeaTiles.append(coord)
+                    coord = neighbor
+                    break
+    
+    def makeTwoVerticesPorts(self, seaHex, vertices):
+        randomIndex = np.random.randint(0, len(seaHex.vertexChildren))
+        coord = seaHex.vertexChildren[randomIndex]
+        vertices[coord].hasPort = True
+        vertices[coord].portType = seaHex.portType
+        alreadySelectedIndex = randomIndex
+        alreadySelectedCoord = coord
+        while alreadySelectedIndex == randomIndex or coord not in vertices[alreadySelectedCoord].vertexNeighbors:
+            randomIndex = np.random.randint(0, len(seaHex.vertexChildren))
+            coord = seaHex.vertexChildren[randomIndex]
+        vertices[coord].hasPort = True
+        vertices[coord].portType = seaHex.portType
+        
+        
 
 
 
 
 
+            
+            
+
+        
 
