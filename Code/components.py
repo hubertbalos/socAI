@@ -3,27 +3,45 @@ import hexlib
 
 class Hextile():
     """
-    xxx
+    Hex board component
     """
     def __init__(self):
+        self.hexcoord = None
+
         self.resource = None
         self.value = None
 
-        self.hexNeighbors = []
-        self.vertexChildren = []
+        self.hex_neighbors = []
+        self.vertex_children = []
 
-        self.hasPort = False
-        self.portType = None
+        self.has_port = False
+        self.port_type = None
 
-        self.hasRobber = False
+        self.has_robber = False
 
 class Vertex():
     """
-    xxx
+    Vertex board component
     """
     def __init__(self):
-        self.vertexNeighbors = []
-        self.hexParents = []
+        self.coord = None
 
-        self.hasPort = False
-        self.portType = None
+        self.vertex_neighbors = []
+        self.hex_parents = []
+
+        self.has_port = False
+        self.port_type = None
+
+        self.owner = None
+        self.has_settlement = False
+        self.has_city = False
+
+class Edge():
+    """
+    Edge between vertices
+    """
+    def __init__(self):
+        self.vertex_parents = []
+
+        self.owner = None
+        self.has_road = False

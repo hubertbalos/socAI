@@ -5,9 +5,9 @@ def main():
     print("Settlers of Catan now running")
     pygame.init()
 
-    myRenderer = Renderer()
+    renderer = Renderer()
 
-    myRenderer.displayState()
+    renderer.displayState()
 
     running = True
     while running:
