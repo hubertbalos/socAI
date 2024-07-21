@@ -24,10 +24,10 @@ class Game():
 
     def gameloop(self):
         self.initialise_players()
-        self.select_starting_settlements()
+        self.board.choose_starting_settlements(self.players)
 
     def initialise_players(self):
-        colours = ["RED", "BLUE", "ORANGE", "WHITE"]
+        colours = np.random.permutation(["RED", "BLUE", "ORANGE", "WHITE"])
         number_of_players = 4
         for i in range(number_of_players):
             new_player = RandomPlayer("RandomPlayer" + str(i), colours[i])
@@ -38,30 +38,6 @@ class Game():
             players.append(player.name)
         
         print(f"Players (Total: {len(players)}): {players}")
-    
-    def select_starting_settlements(self):
-        for player in self.players:
-            self.build_settlement(player)
-            self.build_road(player)
-        
-        # players_reverse = self.players.reverse()
-        # for player in players_reverse:
-        #     self.build_settlement(player)
-    
-    def build_settlement(self, player):
-        action_space = []
-        for coord, vertex in self.board.vertices.items():
-            if coord not in action_space and vertex.owner == None and all(self.board.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors):
-                action_space.append(coord)
-        
-        action = player.choose_action(action_space)
-        print(action)
-        self.board.vertices[action].owner = player.colour
-        self.board.vertices[action].has_settlement = True
-
-    def build_road(self, player):
-        action_space = []
-
         
     def next_player(self):
         next_player =(self.currentPlayer + 1) % len(self.players)

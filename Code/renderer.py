@@ -78,6 +78,7 @@ class Renderer():
                 self.window.blit(text_surface, text_rect)
 
         self.drawPorts()
+        self.drawPlayerRoads()
         self.drawPlayerBuildings()
         
         pygame.display.update()     
@@ -95,6 +96,15 @@ class Renderer():
                         pygame.draw.line(self.window, (102, 51, 0), center, vertex, 5)
                 pygame.draw.circle(self.window, (r, g, b), center, 10)
     
+    def drawPlayerRoads(self):
+        for id, edge in self.board.edges.items():
+            if edge.has_road:
+                Colour = self.PLAYER_COLOUR_DICT[edge.owner]
+                r = Colour[0]
+                g = Colour[1]
+                b = Colour[2]
+                pygame.draw.line(self.window, (r, g, b), edge.vertex_parents[0], edge.vertex_parents[1], 8)
+    
     def drawPlayerBuildings(self):
         for coord, vertex in self.board.vertices.items():
             if vertex.has_settlement:
@@ -103,8 +113,3 @@ class Renderer():
                 g = Colour[1]
                 b = Colour[2]
                 pygame.draw.circle(self.window, (r, g, b), coord, 13)
-
-
-                
-
-                

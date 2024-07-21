@@ -6,8 +6,6 @@ class Hextile():
     Hex board component
     """
     def __init__(self):
-        self.hexcoord = None
-
         self.resource = None
         self.value = None
 
@@ -24,10 +22,9 @@ class Vertex():
     Vertex board component
     """
     def __init__(self):
-        self.coord = None
-
         self.vertex_neighbors = []
         self.hex_parents = []
+        self.edge_children = []
 
         self.has_port = False
         self.port_type = None

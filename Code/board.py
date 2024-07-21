@@ -48,7 +48,9 @@ class Board():
                     id += 1
             traversed_vertices.append(coord)
         
-        print(f"TOTAL EDGES: {len(new_edges)}")
+        for id, edge in new_edges.items():
+            for parent in edge.vertex_parents:
+                vertices[parent].edge_children.append(id)
 
         return new_edges
     
@@ -107,12 +109,14 @@ class Board():
             land_hexes[Hex(0, 0, 0)] = new_hextile
 
             # building the remaining hexes around the origin
+            added_hexes = [Hex(0, 0, 0)]
             for n in range(2):
                 new_land_hexes = {}
                 for coord, hextile in land_hexes.items():
                     for direction in range(6):
                         neighbor = hex_neighbor(coord, direction)
-                        if all(neighbor != coord for coord in land_hexes) and all(neighbor != coord for coord in new_land_hexes): 
+                        if neighbor not in added_hexes:
+                            added_hexes.append(neighbor) 
                             new_hextile = Hextile()
                             new_hextile.resource, new_hextile.value = resource_list.pop()
                             if new_hextile.resource == "DESERT":
@@ -125,8 +129,6 @@ class Board():
                 for direction in range(6):
                     neighbor = hex_neighbor(coord, direction)
                     hextile.hex_neighbors.append(neighbor)
-            
-
         return land_hexes
     
     def is_valid_land_hex_placement(self, land_hexes):
@@ -157,9 +159,6 @@ class Board():
                     neighbor = hex_neighbor(coord, direction)
                     if neighbor in land_hexes or neighbor in sea_hexes:
                         hextile.hex_neighbors.append(neighbor)
-        
-        assert(len(sea_hexes) == 18)
-
         return sea_hexes
 
     def get_random_resource_list(self):
@@ -181,7 +180,6 @@ class Board():
                 resource_list.append((resource_tiles[i], tiles_values[i]))
         
         resource_list.insert(np.random.randint(0, len(resource_list)), ("DESERT", None))
-
         return resource_list
     
     def assign_ports(self, sea_hexes, vertices):
@@ -215,6 +213,45 @@ class Board():
             coord = random.choice(seaHex.vertex_children)
         vertices[coord].has_port = True
         vertices[coord].port_type = seaHex.port_type
+    
+    def choose_starting_settlements(self, players):
+        reversed_players = list(reversed(players))
+        for player in players:
+            self.build_starting_settlments(player)
+        for player in reversed_players:
+            self.build_starting_settlments(player)
+    
+    def build_starting_settlments(self, player):
+        # building settlement
+        possible_settlment_coord = []
+        for coord, vertex in self.vertices.items():
+            if coord not in possible_settlment_coord and vertex.owner == None and all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors):
+                possible_settlment_coord.append(coord)
+        settlement_coord = player.choose_action(possible_settlment_coord)
+        self.vertices[settlement_coord].owner = player.colour
+        self.vertices[settlement_coord].has_settlement = True
+
+        # building adjacent road
+        possible_road_edge = []
+        for child in self.vertices[settlement_coord].edge_children:
+            possible_road_edge.append(child)
+        road_edge = player.choose_action(possible_road_edge)
+        self.edges[road_edge].owner = player.colour
+        self.edges[road_edge].has_road = True
+
+    def build_settlement(self, player):
+        action_space = []
+        for coord, vertex in self.board.vertices.items():
+            if coord not in action_space and vertex.owner == None and all(self.board.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors):
+                action_space.append(coord)
+        
+        action = player.choose_action(action_space)
+        print(action)
+        self.vertices[action].owner = player.colour
+        self.vertices[action].has_settlement = True
+
+    def build_road(self, player):
+        action_space = []
         
         
 
