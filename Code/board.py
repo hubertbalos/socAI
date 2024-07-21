@@ -8,10 +8,10 @@ class Board():
     Contains the board state
     """
     def __init__(self, board_dimensions):
-        # board is made of hexagonal hexes and their vertices
-        self.hexes = {}
-        self.vertices = {}
-        self.edges = {}
+        # board is made of hexagonal hexes and their vertices and edges
+        self.hexes = {} # hexcoord , hextileClass
+        self.vertices = {} # coord , vertexClass
+        self.edges = {} # index, edgeClass
 
         self.width, self.height = board_dimensions
         self.hex_size = 50
@@ -71,14 +71,14 @@ class Board():
         for coord, hextile in land_hexes.items():
             corners = polygon_corners(self.layout, coord)
             for vertex in corners:
-                new_vertices[vertex].hex_parents.append(hextile)
+                new_vertices[vertex].hex_parents.append(coord)
         
         for coord, hextile in sea_hexes.items():
             corners = polygon_corners(self.layout, coord)
             for vertex in corners:
                 if vertex in new_vertices:
                     hextile.vertex_children.append(vertex)
-                    new_vertices[vertex].hex_parents.append(hextile)
+                    #new_vertices[vertex].hex_parents.append(coord)
         
         # computing vertex neighbors
         keys = list(new_vertices.keys())
@@ -214,58 +214,54 @@ class Board():
         vertices[coord].has_port = True
         vertices[coord].port_type = seaHex.port_type
     
-    def choose_starting_builds(self, players):
-        reversed_players = list(reversed(players))
-        for player in players:
-            self.build_starting_builds(player)
-        for player in reversed_players:
-            self.build_starting_builds(player)
+    def choose_starting_builds(self, players, player_order):
+        reversed_players = list(reversed(player_order))
+        for player_index in player_order:
+            _ = self.build_starting_builds(players[player_index])
+        
+        # track location of second settlement for starting resources
+        last_settlement_coords = []
+        for player_index in reversed_players:
+            settlement_coord = self.build_starting_builds(players[player_index])
+            last_settlement_coords.append(settlement_coord)
+        
+        return last_settlement_coords
     
     def build_starting_builds(self, player):
         # building settlement
-        possible_settlment_coord = []
+        possible_settlment_coords = []
         for coord, vertex in self.vertices.items():
             all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
-            if coord not in possible_settlment_coord and vertex.owner == None and all_neighbors_unowned:
-                possible_settlment_coord.append(coord)
-        settlement_coord = player.choose_action(possible_settlment_coord)
+            if coord not in possible_settlment_coords and vertex.owner == None and all_neighbors_unowned:
+                possible_settlment_coords.append(coord)
+        settlement_coord = player.choose_action(possible_settlment_coords)
         self.vertices[settlement_coord].owner = player.colour
         self.vertices[settlement_coord].has_settlement = True
         print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
         # building adjacent road
-        possible_road_edge = []
+        possible_road_edges = []
         for child in self.vertices[settlement_coord].edge_children:
-            possible_road_edge.append(child)
-        road_edge = player.choose_action(possible_road_edge)
+            possible_road_edges.append(child)
+        road_edge = player.choose_action(possible_road_edges)
         self.edges[road_edge].owner = player.colour
         self.edges[road_edge].has_road = True
+        player.owned_roads.append(road_edge)
         print(f"{player.name} ({player.colour}) has built a ROAD")
 
+        return settlement_coord
+
     def build_settlement(self, player):
-        action_space = []
+        # building settlement
+        possible_settlment_coords = []
         for coord, vertex in self.vertices.items():
             all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
-            if coord not in action_space and vertex.owner == None and all_neighbors_unowned:
-                action_space.append(coord)
-        
-        action = player.choose_action(action_space)
-        print(action)
-        self.vertices[action].owner = player.colour
-        self.vertices[action].has_settlement = True
+            if coord not in possible_settlment_coords and vertex.owner == None and all_neighbors_unowned:
+                possible_settlment_coords.append(coord)
+        settlement_coord = player.choose_action(possible_settlment_coords)
+        self.vertices[settlement_coord].owner = player.colour
+        self.vertices[settlement_coord].has_settlement = True
+        print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
     def build_road(self, player):
         action_space = []
-    
-        
-        
-
-
-
-
-
-            
-            
-
-        
-
