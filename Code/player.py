@@ -8,15 +8,16 @@ class Player():
         self.name = player_name
         self.colour = player_colour
 
-        self.victoryPoints = 0
+        self.victory_points = 0
         
         self.resources = {"ORE": 0, "WHEAT": 0, "WOOD": 0, "BRICK": 0, "SHEEP": 0}
+        self.development_cards = {"KNIGHT": 0, "YEAR_OF_PLENTY": 0, "ROAD_BUILDING": 0, "MONOPOLY": 0, "VICTORY_POINTS": 0}
         self.settlements_left = 5
         self.roads_left = 15
         self.cities_left = 4
 
-        self.longestRoad = False
-        self.largestArmy = False
+        self.longest_road = False
+        self.largest_army = False
 
 class RandomPlayer(Player):
     """

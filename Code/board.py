@@ -214,22 +214,24 @@ class Board():
         vertices[coord].has_port = True
         vertices[coord].port_type = seaHex.port_type
     
-    def choose_starting_settlements(self, players):
+    def choose_starting_builds(self, players):
         reversed_players = list(reversed(players))
         for player in players:
-            self.build_starting_settlments(player)
+            self.build_starting_builds(player)
         for player in reversed_players:
-            self.build_starting_settlments(player)
+            self.build_starting_builds(player)
     
-    def build_starting_settlments(self, player):
+    def build_starting_builds(self, player):
         # building settlement
         possible_settlment_coord = []
         for coord, vertex in self.vertices.items():
-            if coord not in possible_settlment_coord and vertex.owner == None and all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors):
+            all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
+            if coord not in possible_settlment_coord and vertex.owner == None and all_neighbors_unowned:
                 possible_settlment_coord.append(coord)
         settlement_coord = player.choose_action(possible_settlment_coord)
         self.vertices[settlement_coord].owner = player.colour
         self.vertices[settlement_coord].has_settlement = True
+        print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
         # building adjacent road
         possible_road_edge = []
@@ -238,11 +240,13 @@ class Board():
         road_edge = player.choose_action(possible_road_edge)
         self.edges[road_edge].owner = player.colour
         self.edges[road_edge].has_road = True
+        print(f"{player.name} ({player.colour}) has built a ROAD")
 
     def build_settlement(self, player):
         action_space = []
-        for coord, vertex in self.board.vertices.items():
-            if coord not in action_space and vertex.owner == None and all(self.board.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors):
+        for coord, vertex in self.vertices.items():
+            all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
+            if coord not in action_space and vertex.owner == None and all_neighbors_unowned:
                 action_space.append(coord)
         
         action = player.choose_action(action_space)
@@ -252,6 +256,7 @@ class Board():
 
     def build_road(self, player):
         action_space = []
+    
         
         
 
