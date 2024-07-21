@@ -237,6 +237,7 @@ class Board():
         settlement_coord = player.choose_action(possible_settlment_coords)
         self.vertices[settlement_coord].owner = player.colour
         self.vertices[settlement_coord].has_settlement = True
+        player.owned_settlements.append(settlement_coord)
         print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
         # building adjacent road
@@ -252,16 +253,53 @@ class Board():
         return settlement_coord
 
     def build_settlement(self, player):
-        # building settlement
+        owned_edges_indexes = player.owned_roads
         possible_settlment_coords = []
-        for coord, vertex in self.vertices.items():
-            all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
-            if coord not in possible_settlment_coords and vertex.owner == None and all_neighbors_unowned:
-                possible_settlment_coords.append(coord)
+        for edge_index in owned_edges_indexes:
+            possible_vertex_coords = self.edges[edge_index].vertex_parents
+            for coord in possible_vertex_coords:
+                vertex = self.vertices[coord]
+                all_neighbors_unowned = all(self.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
+                if coord not in possible_settlment_coords and vertex.owner == None and all_neighbors_unowned:
+                    possible_settlment_coords.append(coord)
         settlement_coord = player.choose_action(possible_settlment_coords)
         self.vertices[settlement_coord].owner = player.colour
         self.vertices[settlement_coord].has_settlement = True
+        player.owned_settlements.append(settlement_coord)
+        player.settlements_left -=1
         print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
     def build_road(self, player):
-        action_space = []
+        possible_road_edges = []
+        explored_vertex_coords = []
+        owned_edges_indexes = player.owned_roads
+        for owned_edge_index in owned_edges_indexes:
+            vertex_coords = self.edges[owned_edge_index].vertex_parents
+            for coord in vertex_coords:
+                if coord not in explored_vertex_coords:
+                    vertex = self.vertices[coord]
+                    explored_vertex_coords.append(coord)
+                    edge_indexes = vertex.edge_children
+                    for index in edge_indexes:
+                        if not self.edges[index].has_road:
+                            possible_road_edges.append(index)
+
+        road_edge = player.choose_action(possible_road_edges)
+        self.edges[road_edge].owner = player.colour
+        self.edges[road_edge].has_road = True
+        player.owned_roads.append(road_edge)
+        player.roads_left -= 1
+        print(f"{player.name} ({player.colour}) has built a ROAD")
+    
+    def build_city(self, player):
+        possible_city_coords = []
+        for settlement_coord in player.owned_settlements:
+            if not self.vertices[settlement_coord].has_city:
+                possible_city_coords.append(settlement_coord)
+        
+        city_coord = player.choose_action(possible_city_coords)
+        self.vertices[city_coord].has_city = True
+        self.vertices[city_coord].has_settlement = False
+        player.cities_left -= 1
+        player.settlements_left += 1
+        print(f"{player.name} ({player.colour}) has built a CITY")

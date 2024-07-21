@@ -23,9 +23,9 @@ class Game():
         self.current_player_index = 0
 
         self.turn = 0
-        self.max_turns = 10
+        self.max_turns = 1000
 
-        self.highest_VPs = 0
+        self.highest_vps = 0
         self.current_leader = None
 
         self.gameloop()
@@ -44,16 +44,18 @@ class Game():
         for player in self.players.values():
             print(player.resources)
 
-        while self.turn < self.max_turns or self.highest_VPs >= 10:
+        while self.turn < self.max_turns or self.highest_vps < 10:
             print("-" * 55)
             current_player = self.players[self.player_order[self.current_player_index]]
             dice_roll = self.roll_dice()
-            print(f"{current_player.name} ({current_player.colour}) has rolled a {dice_roll}\n")
+            print(f"TURN[{self.turn}] {current_player.name} ({current_player.colour}) has rolled a {dice_roll}\n")
             if dice_roll == 7:
                 self.move_robber_and_rob(current_player)
             self.distribute_resources(dice_roll)
 
-            # choose action
+            self.perform_actions(current_player)
+
+            self.decide_leader(current_player)
 
             self.turn += 1
             self.next_player()
@@ -63,9 +65,19 @@ class Game():
             print("\n End turn player resources")
             for player in self.players.values():
                 print(player.resources)
-            
+        
         print("*** GAME FINISHED ***")
+        winner = self.players[self.current_leader]
+        print(f"{winner.name} ({winner.colour}) has WON")
+        print(f"VPs = {winner.victory_points}")
     
+    def decide_leader(self, current_player):
+        for player in self.players.values():
+            vps = player.get_victory_points()
+            if self.highest_vps < vps:
+                self.highest_vps = vps
+                self.current_leader = player.colour
+        
     def give_starting_resources(self, start_settlement_coords):
         for coord in start_settlement_coords:
             owner = self.board.vertices[coord].owner
@@ -83,32 +95,87 @@ class Game():
     
     def perform_actions(self, current_player):
         possible_actions = ["END_TURN"] #  "BUY_DEVELOPMENT_CARD", "PLAY_DEVELOPMENT_CARD"
-        if self.can_build_settlement(current_player):
+        if self.can_build_road(current_player):
             possible_actions.append("BUILD_ROAD")
-        if all(current_player.resources[resource] >= cost for (resource, cost) in self.SETTLEMENT_COST):
+        if self.can_build_settlement(current_player):
             possible_actions.append("BUILD_SETTLEMENT")
-        if all(current_player.resources[resource] >= cost for (resource, cost) in self.CITY_COST):
+        if self.can_build_city(current_player):
             possible_actions.append("BUILD_CITY")
         
+        print(f"{current_player.name} ({current_player.colour}) action pool: {possible_actions}")
         action = current_player.choose_action(possible_actions)
         if action == "END_TURN":
             return # do nothing
         elif action == "BUILD_ROAD":
             self.board.build_road(current_player)
-        elif action == "BUILD_SETTLMENT":
+            self.build_cost_payment(current_player, self.ROAD_COST)
+        elif action == "BUILD_SETTLEMENT":
             self.board.build_settlement(current_player)
+            self.build_cost_payment(current_player, self.SETTLEMENT_COST)
         elif action == "BUILD_CITY":
             self.board.build_city(current_player)
+            self.build_cost_payment(current_player, self.CITY_COST)
+        else:
+            raise Exception("No valid action")
+    
+    def build_cost_payment(self, player, total_cost):
+        for (resource, cost) in total_cost:
+            player.resources[resource] -= cost
+            self.resources[resource] += cost
+    
+    def can_build_road(self, current_player):
+        # does the player have enough resources?
+        if any(current_player.resources[resource] < cost for (resource, cost) in self.ROAD_COST):
+            return False
+        # does the player have any roads in hand?
+        if current_player.roads_left == 0:
+            return False
+        # is there a valid place to build the road?
+        explored_vertex_coords = []
+        owned_edges_indexes = current_player.owned_roads
+        for owned_edge_index in owned_edges_indexes:
+            vertex_coords = self.board.edges[owned_edge_index].vertex_parents
+            for coord in vertex_coords:
+                if coord not in explored_vertex_coords:
+                    vertex = self.board.vertices[coord]
+                    explored_vertex_coords.append(coord)
+                    edge_indexes = vertex.edge_children
+                    for index in edge_indexes:
+                        if not self.board.edges[index].has_road:
+                            return True
+        return False
     
     def can_build_settlement(self, current_player):
         # does the player have enough resources?
-        if all(current_player.resources[resource] < cost for (resource, cost) in self.ROAD_COST):
+        if any(current_player.resources[resource] < cost for (resource, cost) in self.ROAD_COST):
             return False
         # does the player have any settlements in hand?
         if current_player.settlements_left == 0:
             return False
         # is there a valid place to build the settlement?
+        owned_edges_indexes = current_player.owned_roads
+        for edge_index in owned_edges_indexes:
+            possible_vertex_coords = self.board.edges[edge_index].vertex_parents
+            for coord in possible_vertex_coords:
+                vertex = self.board.vertices[coord]
+                all_neighbors_unowned = all(self.board.vertices[neighbor].owner == None for neighbor in vertex.vertex_neighbors)
+                if vertex.owner == None and all_neighbors_unowned:
+                    return True
+        return False
 
+    def can_build_city(self, current_player):
+        # does the player have enough resources?
+        if any(current_player.resources[resource] < cost for (resource, cost) in self.ROAD_COST):
+            return False
+        # does the player have any cities in hand?
+        if current_player.cities_left == 0:
+            return False
+        # is there a valid place to build the city?
+        for settlement_coord in current_player.owned_settlements:
+            if not self.board.vertices[settlement_coord].has_city:
+                return True
+        
+        return False
 
     def initialise_players(self):
         colours = np.random.permutation(["RED", "BLUE", "ORANGE", "WHITE"])

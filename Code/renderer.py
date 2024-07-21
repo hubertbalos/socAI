@@ -109,7 +109,10 @@ class Renderer():
         for coord, vertex in self.board.vertices.items():
             if vertex.has_settlement:
                 Colour = self.PLAYER_COLOUR_DICT[vertex.owner]
-                r = Colour[0]
-                g = Colour[1]
-                b = Colour[2]
+                r, g, b = Colour[0], Colour[1], Colour[2]
                 pygame.draw.circle(self.window, (r, g, b), coord, 13)
+            elif vertex.has_city:
+                Colour = self.PLAYER_COLOUR_DICT[vertex.owner]
+                r, g, b = Colour[0], Colour[1], Colour[2]
+                pygame.draw.circle(self.window, (r, g, b), coord, 13)
+                pygame.draw.circle(self.window, (0, 0, 0), coord, 8)
