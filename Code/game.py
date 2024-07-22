@@ -10,7 +10,8 @@ class Game():
     def __init__(self, board_dimensions):
         self.board = Board(board_dimensions)
 
-        self.development_cards = {"KNIGHT": 14, "YEAR_OF_PLENTY": 2, "ROAD_BUILDING": 2, "MONOPOLY": 2, "VICTORY_POINTS": 5}
+        self.development_cards = {"KNIGHT": 14,  "VICTORY_POINT": 5}
+        # "YEAR_OF_PLENTY": 2, "ROAD_BUILDING": 2, "MONOPOLY": 2,
         self.resources = {"ORE": 19, "WHEAT": 19, "WOOD": 19, "BRICK": 19, "SHEEP": 19}
 
         self.ROAD_COST = [("WOOD", 1), ("BRICK", 1)]
@@ -49,12 +50,12 @@ class Game():
             current_player = self.players[self.player_order[self.current_player_index]]
             dice_roll = self.roll_dice()
             print(f"TURN[{self.turn}] {current_player.name} ({current_player.colour}) has rolled a {dice_roll}\n")
+
             if dice_roll == 7:
                 self.move_robber_and_rob(current_player)
+
             self.distribute_resources(dice_roll)
-
             self.perform_actions(current_player)
-
             self.decide_leader(current_player)
 
             self.turn += 1
@@ -94,13 +95,17 @@ class Game():
 
     
     def perform_actions(self, current_player):
-        possible_actions = ["END_TURN"] #  "BUY_DEVELOPMENT_CARD", "PLAY_DEVELOPMENT_CARD"
+        possible_actions = ["END_TURN"] 
         if self.can_build_road(current_player):
             possible_actions.append("BUILD_ROAD")
         if self.can_build_settlement(current_player):
             possible_actions.append("BUILD_SETTLEMENT")
         if self.can_build_city(current_player):
             possible_actions.append("BUILD_CITY")
+        if self.can_buy_development_card(current_player):
+            possible_actions.append("BUY_DEVELOPMENT_CARD")
+        if self.can_play_development_card(current_player):
+            possible_actions.append("PLAY_DEVELOPMENT_CARD")
         
         print(f"{current_player.name} ({current_player.colour}) action pool: {possible_actions}")
         action = current_player.choose_action(possible_actions)
@@ -115,9 +120,54 @@ class Game():
         elif action == "BUILD_CITY":
             self.board.build_city(current_player)
             self.build_cost_payment(current_player, self.CITY_COST)
+        elif action == "BUY_DEVELOPMENT_CARD":
+            self.buy_development_card(current_player)
+            self.build_cost_payment(current_player, self.DEVELOPMENT_CARD_COST)
+        elif action == "PLAY_DEVELOPMENT_CARD":
+            self.play_development_card(current_player)
         else:
             raise Exception("No valid action")
     
+    def can_buy_development_card(self, current_player):
+        # can afford ?
+        if any(current_player.resources[resource] < cost for (resource, cost) in self.DEVELOPMENT_CARD_COST):
+            return False
+        # enough dev cards ?
+        total = sum(self.development_cards.values())
+        if total == 0:
+            return False
+
+        return True
+
+    def buy_development_card(self, current_player):
+        card_names = list(self.development_cards.keys())
+        card_counts = list(self.development_cards.values())
+        selected_card = random.choices(card_names, weights=card_counts, k=1)[0]
+
+        current_player.development_cards[selected_card] += 1
+        self.development_cards[selected_card] -= 1
+    
+    def can_play_development_card(self, current_player):
+        total = sum(current_player.development_cards.values())
+        if total == 0:
+            return False
+        else:
+            return True
+    
+    def play_development_card(self, current_player):
+        # card_names = [key for key, value in current_player.development_cards.items() if key != "VICTORY_POINT"]
+        # card_counts = [value for key, value in current_player.development_cards.items() if key != "VICTORY_POINT"]
+        # print(card_names)
+        # selected_card = random.choices(card_names, weights=card_counts, k=1)[0]
+        selected_card = "KNIGHT"
+        
+        if selected_card == "KNIGHT":
+            print(f"{current_player.name} ({current_player.colour}) has played a KNIGHT")
+            self.move_robber_and_rob(current_player)
+            current_player.development_cards["KNIGHT"] -= 1
+        else:
+            raise Exception("Invalid card played")
+
     def build_cost_payment(self, player, total_cost):
         for (resource, cost) in total_cost:
             player.resources[resource] -= cost
@@ -259,11 +309,8 @@ class Game():
             print(f"No valid players to rob")
          
     def player_has_resources(self, player):
-        player_resource_values = self.players[player].resources.values()
-        net = 0
-        for value in player_resource_values:
-            net += value
-        if net > 0:
+        total = sum(self.players[player].resources.values())
+        if total > 0:
             return True
         else:
             return False
