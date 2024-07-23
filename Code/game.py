@@ -1,7 +1,6 @@
 import numpy as np
 from board import Board
 from player import *
-import random
 from collections import defaultdict
 
 class Game():
@@ -35,9 +34,12 @@ class Game():
         self.longest_road = 4
         self.longest_road_owner = None
 
+        self.dev_card_played = False
+
         self.gameloop()
 
     def gameloop(self):
+        "Function that contains the main game loop logic"
         self.initialise_players()
 
         print("-" * 55)
@@ -53,6 +55,7 @@ class Game():
 
         while self.turn < self.max_turns and self.highest_vps < 10:
             print("-" * 55)
+            self.dev_card_played = False
             current_player = self.players[self.player_order[self.current_player_index]]
             dice_roll = self.roll_dice()
             print(f"TURN[{self.turn}] {current_player.name} ({current_player.colour}) has rolled a {dice_roll}\n")
@@ -73,12 +76,14 @@ class Game():
             for player in self.players.values():
                 print(player.resources)
         
+        print("\n*********************")
         print("*** GAME FINISHED ***")
+        print("*********************\n")
         winner = self.players[self.current_leader]
         print(f"{winner.name} ({winner.colour}) has WON")
-        print(f"VPs = {winner.victory_points}")
     
     def game_over(self, current_player):
+        "Returns bool to indicate if the game is over"
         # largest army
         if current_player.knights_played > self.most_knights:
             current_player.largest_army = True
@@ -103,8 +108,9 @@ class Game():
             return False
     
     def check_longest_road(self, player):
+        "Updates player longest road length and checks if player has the longest road in the game"
+
         current_length = self.board.get_longest_road(player)
-        print(f"************* NEW LENGTH *********: {current_length}")
 
         if current_length > player.longest_road_length:
             player.longest_road_length = current_length
@@ -120,6 +126,7 @@ class Game():
             self.longest_road = current_length
         
     def give_starting_resources(self, start_settlement_coords):
+        "Distributes starting resources for second settlement to players"
         for coord in start_settlement_coords:
             owner = self.board.vertices[coord].owner
             player = self.players[owner]
@@ -135,6 +142,7 @@ class Game():
 
     
     def perform_actions(self, current_player):
+        "Wrapper function to perfom player actions during a turn"
         action = self.get_action(current_player)
         while action != "END_TURN":
             if action == "BUILD_ROAD":
@@ -160,6 +168,7 @@ class Game():
         return
     
     def get_action(self, current_player):
+        "Returns a list of possible player actions during a turn"
         possible_actions = ["END_TURN"] 
         if self.can_build_road(current_player):
             possible_actions.append("BUILD_ROAD")
@@ -179,12 +188,14 @@ class Game():
         return action
     
     def can_trade_with_bank(self, current_player):
+        "Returns bool for function name condition"
         for resource, amount in current_player.resources.items():
             if amount > current_player.trading_cost[resource]:
                 return True
         return False
 
     def trade_with_bank(self, current_player):
+        "Carries out the player trade with the bank"
         tradeable_resources = []
         for resource, amount in current_player.resources.items():
             if amount > current_player.trading_cost[resource]:
@@ -192,7 +203,7 @@ class Game():
         
         selected_resource = None
         if len(tradeable_resources) == 1:
-            possible_resources = [resource for resource in current_player.resources.keys() if resource not in tradeable_resources]
+            possible_resources = [resource for resource, value in self.resources.items() if resource not in tradeable_resources and value > 0]
             selected_resource = current_player.choose_action(possible_resources)
         else:
             possible_resources = list(current_player.resources.keys())
@@ -200,7 +211,6 @@ class Game():
         
         payment_resource = current_player.choose_action([resource for resource in tradeable_resources if resource != selected_resource])
         cost = current_player.trading_cost[payment_resource]
-
         self.resources[selected_resource] -= 1
         current_player.resources[selected_resource] += 1
 
@@ -210,6 +220,7 @@ class Game():
         print(f"{current_player.name} ({current_player.colour}) has traded {cost} {payment_resource} for 1 {selected_resource} with BANK")
     
     def can_buy_development_card(self, current_player):
+        "Returns bool for function name condition"
         # can afford ?
         if any(current_player.resources[resource] < cost for (resource, cost) in self.DEVELOPMENT_CARD_COST):
             return False
@@ -221,6 +232,7 @@ class Game():
         return True
 
     def buy_development_card(self, current_player):
+        "Carries out the purchase of a development card for the player"
         possible_cards = []
         for dev_card, count in self.development_cards.items():
             possible_cards.extend([dev_card] * count)
@@ -230,13 +242,15 @@ class Game():
         self.development_cards[selected_card] -= 1
     
     def can_play_development_card(self, current_player):
+        "Returns bool for function name condition"
         total = sum(value for key, value in current_player.development_cards.items() if key != "VICTORY_POINT")
-        if total == 0:
+        if total == 0 or self.dev_card_played:
             return False
         else:
             return True
     
     def play_development_card(self, current_player):
+        "Plays a development card for the player"
         possible_cards = []
         for dev_card, count in current_player.development_cards.items():
             if dev_card != "VICTORY_POINT":
@@ -265,6 +279,7 @@ class Game():
             raise Exception("Invalid card played")
     
     def play_year_of_plenty(self, current_player):
+        "Players the development card year of plenty"
         resource_list = []
         for resource, count in self.resources.items():
             resource_list.extend([resource] * count)
@@ -293,6 +308,7 @@ class Game():
             current_player.resources[chosen_2] += 1
     
     def play_monopoly(self, current_player):
+        "Plays the development card monopoly"
         resources = list(self.resources.keys())
         to_steal = current_player.choose_action(resources)
         total_stolen = 0
@@ -305,11 +321,13 @@ class Game():
         print(f"{current_player.name} ({current_player.colour}) has stolen {total_stolen} {to_steal}")
 
     def build_cost_payment(self, player, total_cost):
+        "Carries out the transfer of resources for a build between player and bank"
         for (resource, cost) in total_cost:
             player.resources[resource] -= cost
             self.resources[resource] += cost
     
     def can_build_road(self, current_player):
+        "Returns bool for function name condition"
         # does the player have enough resources?
         if any(current_player.resources[resource] < cost for (resource, cost) in self.ROAD_COST):
             return False
@@ -332,6 +350,7 @@ class Game():
         return False
     
     def can_build_settlement(self, current_player):
+        "Returns bool for function name condition"
         # does the player have enough resources?
         if any(current_player.resources[resource] < cost for (resource, cost) in self.SETTLEMENT_COST):
             return False
@@ -350,6 +369,7 @@ class Game():
         return False
 
     def can_build_city(self, current_player):
+        "Returns bool for function name condition"
         # does the player have enough resources?
         if any(current_player.resources[resource] < cost for (resource, cost) in self.CITY_COST):
             return False
@@ -364,6 +384,7 @@ class Game():
         return False
 
     def initialise_players(self):
+        "Initialises the players for the game"
         colours = np.random.permutation(["RED", "BLUE", "ORANGE", "WHITE"])
         number_of_players = 4
         for i in range(number_of_players):
@@ -380,10 +401,12 @@ class Game():
             print(f"{player.name} ({player.colour})")
         
     def next_player(self):
+        "Updates the index of the current player to the next"
         next_player = (self.current_player_index + 1) % len(self.players)
         self.current_player_index = next_player
     
     def distribute_resources(self, dice_roll):
+        "Distributes resources on a dice roll to hex owners"
         rolled_hexes = []
         for coord, hextile in self.board.hexes.items():
             if hextile.value == dice_roll:
@@ -417,6 +440,7 @@ class Game():
                     print(f"{player.name} ({player.colour}) has received {gain} {resource}")
             
     def move_robber_and_rob(self, player):
+        "Moves the robber and allows player to choose who to rob"
         possible_robber_coords = []
         for coord, hextile in self.board.hexes.items():
             if hextile.resource != "SEA":
@@ -444,6 +468,7 @@ class Game():
             print(f"No valid players to rob")
          
     def player_has_resources(self, player):
+        "Returns bool for function name condition"
         total = sum(self.players[player].resources.values())
         if total > 0:
             return True
@@ -451,6 +476,7 @@ class Game():
             return False
     
     def steal_random_resource(self, robber, player_to_rob):
+        "Player who is robber steals a random resources from another player"
         possible_resources = []
         for resource, count in player_to_rob.resources.items():
             possible_resources.extend([resource] * count)
@@ -468,6 +494,7 @@ class Game():
         return result
     
     def get_board(self):
+        "Returns the whole board class"
         return self.board
     
     """

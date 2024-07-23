@@ -1,5 +1,4 @@
-import collections
-import hexlib
+
 
 class Hextile():
     """
@@ -35,7 +34,7 @@ class Vertex():
 
 class Edge():
     """
-    Edge between vertices
+    Edge between two vertices
     """
     def __init__(self):
         self.vertex_parents = [] # list of vertex coords

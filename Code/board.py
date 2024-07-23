@@ -20,6 +20,7 @@ class Board():
         self.generate_random_board()
     
     def generate_random_board(self):
+        "Wrapper function that generates a random board"
         land_hexes = self.generate_land_hexes()
         sea_hexes = self.generate_sea_hexes(land_hexes)
         vertices = self.generate_vertices(land_hexes, sea_hexes)
@@ -132,6 +133,7 @@ class Board():
         return land_hexes
     
     def is_valid_land_hex_placement(self, land_hexes):
+        "Returns bool for function name condiiton"
         for coord, hextile in land_hexes.items():
             if hextile.value == 6 or hextile.value == 8:
                 for neighbor in hextile.hex_neighbors:
@@ -162,7 +164,7 @@ class Board():
         return sea_hexes
 
     def get_random_resource_list(self):
-        "Returns a random list of resource type and value pairs"
+        "Returns a random list of tuples (resource type, value)"
         # Resource = collections.namedtuple("Resource", ["type", "value"])
 
         resource_tiles = np.random.permutation([
@@ -183,6 +185,7 @@ class Board():
         return resource_list
     
     def assign_ports(self, sea_hexes, vertices):
+        "Randomly assigns 9 sea hexes as ports"
         port_types = list(np.random.permutation([
             "ORE", "WHEAT", "WOOD", "BRICK", "SHEEP", "3:1", "3:1", "3:1", "3:1" ]))
         sea_hexesList = list(sea_hexes.keys())
@@ -205,6 +208,7 @@ class Board():
                     break
     
     def make_two_vertices_ports(self, seaHex, vertices):
+        "For sea hex with port chooses two random hex vertex children as port vertices"
         coord = random.choice(seaHex.vertex_children)
         vertices[coord].has_port = True
         vertices[coord].port_type = seaHex.port_type
@@ -215,6 +219,7 @@ class Board():
         vertices[coord].port_type = seaHex.port_type
     
     def choose_starting_builds(self, players, player_order):
+        "Wrapper function to choose settlement and road for beginning phase"
         reversed_players = list(reversed(player_order))
         for player_index in player_order:
             _ = self.build_starting_builds(players[player_index])
@@ -228,6 +233,7 @@ class Board():
         return last_settlement_coords
     
     def build_starting_builds(self, player):
+        "Builds a settlement on an vertex and a road on an adjacent edge"
         # building settlement
         possible_settlment_coords = []
         for coord, vertex in self.vertices.items():
@@ -253,6 +259,7 @@ class Board():
         return settlement_coord
 
     def build_settlement(self, player):
+        "Builds settlement on a board vertex"
         owned_edges_indexes = player.owned_roads
         possible_settlment_coords = []
         for edge_index in owned_edges_indexes:
@@ -281,6 +288,7 @@ class Board():
         print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
 
     def build_road(self, player):
+        "Builds a road on a board edge"
         possible_road_edges = []
         explored_vertex_coords = []
         owned_edges_indexes = player.owned_roads
@@ -303,6 +311,7 @@ class Board():
         print(f"{player.name} ({player.colour}) has built a ROAD")
     
     def build_city(self, player):
+        "Turns a player settlement into a city"
         possible_city_coords = []
         for settlement_coord in player.owned_settlements:
             if not self.vertices[settlement_coord].has_city:
@@ -316,6 +325,7 @@ class Board():
         print(f"{player.name} ({player.colour}) has built a CITY")
     
     def get_longest_road(self, player):
+        "Returns the longest road length a player has"
         longest_road_length = 0
 
         def dfs(vertex, visited_edges):

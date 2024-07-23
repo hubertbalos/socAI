@@ -26,6 +26,7 @@ class Player():
         self.largest_army = False
     
     def get_victory_points(self):
+        "Returns the total victory points a player has"
         cities = (4 - self.cities_left) * 2
         settlements = (5 - self.settlements_left)
         dev_cards = self.development_cards["VICTORY_POINT"]

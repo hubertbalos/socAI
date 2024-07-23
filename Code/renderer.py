@@ -1,7 +1,7 @@
 import pygame
 from game import Game
 from hexlib import *
-import numpy as np
+import os
 
 class Renderer():
     """
@@ -13,6 +13,7 @@ class Renderer():
         pygame.display.set_caption("Settlers of Catan Engine")
 
         self.WINDOW_SIZE = (750, 910)
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(760, 50)
         self.window = pygame.display.set_mode(self.WINDOW_SIZE)
         self.game = Game(self.WINDOW_SIZE)
         self.board = self.game.get_board()
@@ -42,6 +43,7 @@ class Renderer():
         self.displayState()
 
     def displayState(self):
+        "Displays the state of the board"
         # background colour
         self.window.fill((102, 178, 255))
         # drawing hexes
@@ -86,6 +88,7 @@ class Renderer():
         pygame.display.update()     
     
     def drawPorts(self):
+        "Draws ports to the screen"
         for coord, hextile in self.board.hexes.items():
             center = hex_to_pixel(self.board.layout, coord)
             if hextile.has_port:
@@ -99,6 +102,7 @@ class Renderer():
                 pygame.draw.circle(self.window, (r, g, b), center, 10)
     
     def drawPlayerRoads(self):
+        "Draws player road to the screen"
         for id, edge in self.board.edges.items():
             if edge.has_road:
                 Colour = self.PLAYER_COLOUR_DICT[edge.owner]
@@ -108,6 +112,7 @@ class Renderer():
                 pygame.draw.line(self.window, (r, g, b), edge.vertex_parents[0], edge.vertex_parents[1], 8)
     
     def drawPlayerBuildings(self):
+        "Draws player buildings to the screen"
         for coord, vertex in self.board.vertices.items():
             if vertex.has_settlement:
                 Colour = self.PLAYER_COLOUR_DICT[vertex.owner]
@@ -120,6 +125,7 @@ class Renderer():
                 pygame.draw.circle(self.window, (0, 0, 0), coord, 8)
     
     def draw_score(self):
+        "Draws player score to the screen"
         font = pygame.font.SysFont(None, 30)
         position = [5, 5]
         for player in self.game.players.values():
