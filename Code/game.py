@@ -135,6 +135,31 @@ class Game():
 
     
     def perform_actions(self, current_player):
+        action = self.get_action(current_player)
+        while action != "END_TURN":
+            if action == "BUILD_ROAD":
+                self.board.build_road(current_player)
+                self.build_cost_payment(current_player, self.ROAD_COST)
+                self.check_longest_road(current_player)
+            elif action == "BUILD_SETTLEMENT":
+                self.board.build_settlement(current_player)
+                self.build_cost_payment(current_player, self.SETTLEMENT_COST)
+            elif action == "BUILD_CITY":
+                self.board.build_city(current_player)
+                self.build_cost_payment(current_player, self.CITY_COST)
+            elif action == "BUY_DEVELOPMENT_CARD":
+                self.buy_development_card(current_player)
+                self.build_cost_payment(current_player, self.DEVELOPMENT_CARD_COST)
+            elif action == "PLAY_DEVELOPMENT_CARD":
+                self.play_development_card(current_player)
+            elif action == "TRADE_WITH_BANK":
+                self.trade_with_bank(current_player)
+            else:
+                raise Exception("No valid action")
+            action = self.get_action(current_player)
+        return
+    
+    def get_action(self, current_player):
         possible_actions = ["END_TURN"] 
         if self.can_build_road(current_player):
             possible_actions.append("BUILD_ROAD")
@@ -146,28 +171,43 @@ class Game():
             possible_actions.append("BUY_DEVELOPMENT_CARD")
         if self.can_play_development_card(current_player):
             possible_actions.append("PLAY_DEVELOPMENT_CARD")
+        if self.can_trade_with_bank(current_player):
+            possible_actions.append("TRADE_WITH_BANK")
         
         #print(f"{current_player.name} ({current_player.colour}) action pool: {possible_actions}")
         action = current_player.choose_action(possible_actions)
-        if action == "END_TURN":
-            return # do nothing
-        elif action == "BUILD_ROAD":
-            self.board.build_road(current_player)
-            self.build_cost_payment(current_player, self.ROAD_COST)
-            self.check_longest_road(current_player)
-        elif action == "BUILD_SETTLEMENT":
-            self.board.build_settlement(current_player)
-            self.build_cost_payment(current_player, self.SETTLEMENT_COST)
-        elif action == "BUILD_CITY":
-            self.board.build_city(current_player)
-            self.build_cost_payment(current_player, self.CITY_COST)
-        elif action == "BUY_DEVELOPMENT_CARD":
-            self.buy_development_card(current_player)
-            self.build_cost_payment(current_player, self.DEVELOPMENT_CARD_COST)
-        elif action == "PLAY_DEVELOPMENT_CARD":
-            self.play_development_card(current_player)
+        return action
+    
+    def can_trade_with_bank(self, current_player):
+        for resource, amount in current_player.resources.items():
+            if amount > current_player.trading_cost[resource]:
+                return True
+        return False
+
+    def trade_with_bank(self, current_player):
+        tradeable_resources = []
+        for resource, amount in current_player.resources.items():
+            if amount > current_player.trading_cost[resource]:
+                tradeable_resources.append(resource)
+        
+        selected_resource = None
+        if len(tradeable_resources) == 1:
+            possible_resources = [resource for resource in current_player.resources.keys() if resource not in tradeable_resources]
+            selected_resource = current_player.choose_action(possible_resources)
         else:
-            raise Exception("No valid action")
+            possible_resources = list(current_player.resources.keys())
+            selected_resource = current_player.choose_action(possible_resources)
+        
+        payment_resource = current_player.choose_action([resource for resource in tradeable_resources if resource != selected_resource])
+        cost = current_player.trading_cost[payment_resource]
+
+        self.resources[selected_resource] -= 1
+        current_player.resources[selected_resource] += 1
+
+        self.resources[payment_resource] += cost
+        current_player.resources[payment_resource] -= cost
+
+        print(f"{current_player.name} ({current_player.colour}) has traded {cost} {payment_resource} for 1 {selected_resource} with BANK")
     
     def can_buy_development_card(self, current_player):
         # can afford ?

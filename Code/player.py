@@ -11,6 +11,7 @@ class Player():
         self.victory_points = 2 # player starts with 2 settlements
         
         self.resources = {"ORE": 0, "WHEAT": 0, "WOOD": 0, "BRICK": 0, "SHEEP": 0}
+        self.trading_cost = {"ORE": 4, "WHEAT": 4, "WOOD": 4, "BRICK": 4, "SHEEP": 4}
         self.development_cards = {"KNIGHT": 0, "YEAR_OF_PLENTY": 0, "ROAD_BUILDING": 0, "MONOPOLY": 0, "VICTORY_POINT": 0}
         self.owned_roads = [] # list of edge indexes
         self.owned_settlements = [] # list of vertex coords

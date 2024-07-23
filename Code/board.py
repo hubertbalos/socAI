@@ -263,8 +263,19 @@ class Board():
                 if coord not in possible_settlment_coords and vertex.owner == None and all_neighbors_unowned:
                     possible_settlment_coords.append(coord)
         settlement_coord = player.choose_action(possible_settlment_coords)
-        self.vertices[settlement_coord].owner = player.colour
-        self.vertices[settlement_coord].has_settlement = True
+
+        vertex = self.vertices[settlement_coord]
+        vertex.owner = player.colour
+        vertex.has_settlement = True
+
+        if vertex.has_port:
+            if vertex.port_type == "3:1":
+                for resource, cost in player.trading_cost.items():
+                    if cost == 4:
+                        player.trading_cost[resource] = 3
+            else:
+                player.trading_cost[vertex.port_type] = 2
+        
         player.owned_settlements.append(settlement_coord)
         player.settlements_left -=1
         print(f"{player.name} ({player.colour}) has built a SETTLEMENET")
