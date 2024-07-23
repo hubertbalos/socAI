@@ -303,3 +303,36 @@ class Board():
         player.cities_left -= 1
         player.settlements_left += 1
         print(f"{player.name} ({player.colour}) has built a CITY")
+    
+    def get_longest_road(self, player):
+        longest_road_length = 0
+
+        def dfs(vertex, visited_edges):
+            nonlocal longest_road_length
+            longest_path = 0
+
+            for edge_index in self.vertices[vertex].edge_children:
+                edge = self.edges[edge_index]
+
+                if edge.owner == player.colour and edge_index not in visited_edges:
+                    visited_edges.add(edge_index)
+
+                    for neighbor_vertex in edge.vertex_parents:
+                        if neighbor_vertex != vertex:
+                            if self.vertices[neighbor_vertex].owner is None or self.vertices[neighbor_vertex].owner == player.colour:
+                                path_length = dfs(neighbor_vertex, visited_edges)
+                                longest_path = max(longest_path, 1 + path_length)
+
+                    visited_edges.remove(edge_index)
+
+            longest_road_length = max(longest_road_length, longest_path)
+            return longest_path
+
+        visited_edges = set()
+        for edge_index in player.owned_roads:
+            edge = self.edges[edge_index]
+
+            for vertex in edge.vertex_parents:
+                dfs(vertex, visited_edges)
+
+        return longest_road_length

@@ -22,9 +22,9 @@ class Vertex():
     Vertex board component
     """
     def __init__(self):
-        self.vertex_neighbors = []
-        self.hex_parents = []
-        self.edge_children = []
+        self.vertex_neighbors = [] # list of vertex coords
+        self.hex_parents = [] # list of hex coords
+        self.edge_children = [] # list of edge indexes
 
         self.has_port = False
         self.port_type = None
@@ -38,7 +38,7 @@ class Edge():
     Edge between vertices
     """
     def __init__(self):
-        self.vertex_parents = []
+        self.vertex_parents = [] # list of vertex coords
 
         self.owner = None
         self.has_road = False

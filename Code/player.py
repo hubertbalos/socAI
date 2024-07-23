@@ -11,14 +11,15 @@ class Player():
         self.victory_points = 2 # player starts with 2 settlements
         
         self.resources = {"ORE": 0, "WHEAT": 0, "WOOD": 0, "BRICK": 0, "SHEEP": 0}
-        self.development_cards = {"KNIGHT": 0, "VICTORY_POINT": 0}
-        # "YEAR_OF_PLENTY": 0, "ROAD_BUILDING": 0, "MONOPOLY": 0,
+        self.development_cards = {"KNIGHT": 0, "YEAR_OF_PLENTY": 0, "ROAD_BUILDING": 0, "MONOPOLY": 0, "VICTORY_POINT": 0}
         self.owned_roads = [] # list of edge indexes
         self.owned_settlements = [] # list of vertex coords
         self.settlements_left = 3 # 5 but setup settlements already subtracted
         self.roads_left = 13 # 15 but setup roads already subtracted
         self.cities_left = 4
+
         self.knights_played = 0
+        self.longest_road_length = 1
 
         self.longest_road = False
         self.largest_army = False

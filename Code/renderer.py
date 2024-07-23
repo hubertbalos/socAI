@@ -80,7 +80,9 @@ class Renderer():
         self.drawPorts()
         self.drawPlayerRoads()
         self.drawPlayerBuildings()
-        
+        self.draw_score()
+
+
         pygame.display.update()     
     
     def drawPorts(self):
@@ -116,3 +118,17 @@ class Renderer():
                 r, g, b = Colour[0], Colour[1], Colour[2]
                 pygame.draw.circle(self.window, (r, g, b), coord, 13)
                 pygame.draw.circle(self.window, (0, 0, 0), coord, 8)
+    
+    def draw_score(self):
+        font = pygame.font.SysFont(None, 30)
+        position = [5, 5]
+        for player in self.game.players.values():
+            Colour = self.PLAYER_COLOUR_DICT[player.colour]
+            r, g, b = Colour[0], Colour[1], Colour[2]
+            vps = player.get_victory_points()
+            knights = player.knights_played
+            road = player.longest_road_length
+            text_surface = font.render(f"*{player.name}* VPs: {vps} - Knights: {knights} - Longest Road: {road}", True, (r, g, b))
+            self.window.blit(text_surface, position)
+            position[1] += 25
+        
