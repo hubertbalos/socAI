@@ -81,6 +81,12 @@ class Game():
         print("*********************\n")
         winner = self.players[self.current_leader]
         print(f"{winner.name} ({winner.colour}) has WON")
+        if self.longest_road_owner is not None:
+            longest_road = self.players[self.longest_road_owner]
+            print(f"{longest_road.name} ({longest_road.colour}) has LONGEST ROAD")
+        if self.largest_army_owner is not None:
+            largest_army = self.players[self.largest_army_owner]
+            print(f"{largest_army.name} ({largest_army.colour}) has LARGEST ARMY")
     
     def game_over(self, current_player):
         "Returns bool to indicate if the game is over"
@@ -119,7 +125,7 @@ class Game():
         
         if current_length > self.longest_road:
             player.longest_road = True
-            if self.longest_road_owner is not None:
+            if self.longest_road_owner is not None and self.longest_road_owner is not player.colour:
                 self.players[self.longest_road_owner].longest_road = False
             
             self.longest_road_owner = player.colour
