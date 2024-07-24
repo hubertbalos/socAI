@@ -8,7 +8,7 @@ involving a complex trading system where players can trade resources between
 themselves. This means players must make strategic decisions based on limited
 information and probabilistic outcomes.
 
-<img width="1510" alt="image" src="https://github.com/user-attachments/assets/b4dd492c-0d9a-420c-884c-69a3faefbdc8">
+![Catan Board](/images/game_gui.png)
 
 ## Overview
 
