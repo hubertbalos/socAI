@@ -87,13 +87,14 @@ class Game():
         if self.largest_army_owner is not None:
             largest_army = self.players[self.largest_army_owner]
             print(f"{largest_army.name} ({largest_army.colour}) has LARGEST ARMY")
+        print("\n> Press ENTER to exit <")
     
     def game_over(self, current_player):
         "Returns bool to indicate if the game is over"
         # largest army
         if current_player.knights_played > self.most_knights:
             current_player.largest_army = True
-            if self.largest_army_owner is not None:
+            if self.largest_army_owner is not None and self.largest_army_owner != current_player.name:
                 self.players[self.largest_army_owner].largest_army = False
 
             self.largest_army_owner = current_player.colour
