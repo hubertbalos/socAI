@@ -1,22 +1,20 @@
 import pygame
 from game import Game
 from hexlib import *
+from typing import Tuple
 import os
 
 class Renderer():
     """
     Renders the state of the game to the screen
     """
-    def __init__(self):
-        print("Renderer initialising")
-
+    def __init__(self, windowSize: Tuple[int, int], game: Game):
         pygame.display.set_caption("Settlers of Catan Engine")
 
-        self.WINDOW_SIZE = (750, 910)
+        self.WINDOW_SIZE = windowSize
         os.environ['SDL_VIDEO_WINDOW_POS'] = "%d, %d" %(760, 50)
         self.window = pygame.display.set_mode(self.WINDOW_SIZE)
-        self.game = Game(self.WINDOW_SIZE)
-        self.board = self.game.get_board()
+        self.board = game.board
 
         self.RESOURCE_COLOUR_DICT = {
             "ORE":(160,160,160), 
@@ -40,9 +38,7 @@ class Renderer():
         
         self.font = pygame.font.SysFont(None, 40)
 
-        self.displayState()
-
-    def displayState(self):
+    def display(self):
         "Displays the state of the board"
         # background colour
         self.window.fill((102, 178, 255))
@@ -82,7 +78,7 @@ class Renderer():
         self.drawPorts()
         self.drawPlayerRoads()
         self.drawPlayerBuildings()
-        self.draw_score()
+        # self.draw_score()
 
 
         pygame.display.update()     
@@ -91,50 +87,50 @@ class Renderer():
         "Draws ports to the screen"
         for coord, hextile in self.board.hexes.items():
             center = hex_to_pixel(self.board.layout, coord)
-            if hextile.has_port:
+            if hextile.port_type:
                 Colour = self.RESOURCE_COLOUR_DICT[hextile.port_type]
                 r = Colour[0]
                 g = Colour[1]
                 b = Colour[2]
-                for vertex in hextile.vertex_children:
-                    if self.board.vertices[vertex].has_port:
+                for vertex in hextile.vertex_neighbors:
+                    if self.board.vertices[vertex].port_type:
                         pygame.draw.line(self.window, (102, 51, 0), center, vertex, 5)
                 pygame.draw.circle(self.window, (r, g, b), center, 10)
     
     def drawPlayerRoads(self):
         "Draws player road to the screen"
-        for id, edge in self.board.edges.items():
+        for edge in self.board.edges.values():
             if edge.has_road:
-                Colour = self.PLAYER_COLOUR_DICT[edge.owner]
+                Colour = self.PLAYER_COLOUR_DICT[edge.owner_colour]
                 r = Colour[0]
                 g = Colour[1]
                 b = Colour[2]
-                pygame.draw.line(self.window, (r, g, b), edge.vertex_parents[0], edge.vertex_parents[1], 8)
+                pygame.draw.line(self.window, (r, g, b), edge.vertex_neighbors[0], edge.vertex_neighbors[1], 8)
     
     def drawPlayerBuildings(self):
         "Draws player buildings to the screen"
         for coord, vertex in self.board.vertices.items():
-            if vertex.has_settlement:
-                Colour = self.PLAYER_COLOUR_DICT[vertex.owner]
+            if vertex.building == "SETTLEMENT":
+                Colour = self.PLAYER_COLOUR_DICT[vertex.owner_colour]
                 r, g, b = Colour[0], Colour[1], Colour[2]
                 pygame.draw.circle(self.window, (r, g, b), coord, 13)
-            elif vertex.has_city:
-                Colour = self.PLAYER_COLOUR_DICT[vertex.owner]
+            elif vertex.building == "CITY":
+                Colour = self.PLAYER_COLOUR_DICT[vertex.owner_colour]
                 r, g, b = Colour[0], Colour[1], Colour[2]
                 pygame.draw.circle(self.window, (r, g, b), coord, 13)
                 pygame.draw.circle(self.window, (0, 0, 0), coord, 8)
     
-    def draw_score(self):
-        "Draws player score to the screen"
-        font = pygame.font.SysFont(None, 30)
-        position = [5, 5]
-        for player in self.game.players.values():
-            Colour = self.PLAYER_COLOUR_DICT[player.colour]
-            r, g, b = Colour[0], Colour[1], Colour[2]
-            vps = player.get_victory_points()
-            knights = player.knights_played
-            road = player.longest_road_length
-            text_surface = font.render(f"*{player.name}* VPs: {vps} - Knights: {knights} - Longest Road: {road}", True, (r, g, b))
-            self.window.blit(text_surface, position)
-            position[1] += 25
-        
+    # def draw_score(self):
+    #     "Draws player score to the screen"
+    #     font = pygame.font.SysFont(None, 30)
+    #     position = [5, 5]
+    #     for player in self.board.game.players.values():
+    #         Colour = self.PLAYER_COLOUR_DICT[player.colour]
+    #         r, g, b = Colour[0], Colour[1], Colour[2]
+    #         vps = player.victory_points
+    #         knights = player.knights_played
+    #         road = player.longest_road_length
+    #         text_surface = font.render(
+    #             f"*{player.colour}* VPs: {vps} Knights: {knights} Longest Road: {road} vp: {player.development_cards["VICTORY_POINT"]}", True, (r, g, b))
+    #         self.window.blit(text_surface, position)
+    #         position[1] += 25

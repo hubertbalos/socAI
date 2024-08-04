@@ -5,12 +5,10 @@ import math
 
 Point = collections.namedtuple("Point", ["x", "y"])
 
-
-
-_Hex = collections.namedtuple("Hex", ["q", "r", "s"])
-def Hex(q, r, s):
-    assert not (round(q + r + s) != 0), "q + r + s must be 0"
-    return _Hex(q, r, s)
+Hex = collections.namedtuple("Hex", ["q", "r", "s"])
+# def Hex(q, r, s):
+#     assert not (round(q + r + s) != 0), "q + r + s must be 0"
+#     return _Hex(q, r, s) 
 
 def hex_add(a, b):
     return Hex(a.q + b.q, a.r + b.r, a.s + b.s)
@@ -138,17 +136,13 @@ def rdoubled_to_cube(h):
     return Hex(q, r, s)
 
 
-
-
 Orientation = collections.namedtuple("Orientation", ["f0", "f1", "f2", "f3", "b0", "b1", "b2", "b3", "start_angle"])
-
-
-
 
 Layout = collections.namedtuple("Layout", ["orientation", "size", "origin"])
 
 layout_pointy = Orientation(math.sqrt(3.0), math.sqrt(3.0) / 2.0, 0.0, 3.0 / 2.0, math.sqrt(3.0) / 3.0, -1.0 / 3.0, 0.0, 2.0 / 3.0, 0.5)
 layout_flat = Orientation(3.0 / 2.0, 0.0, math.sqrt(3.0) / 2.0, math.sqrt(3.0), 2.0 / 3.0, 0.0, -1.0 / 3.0, math.sqrt(3.0) / 3.0, 0.0)
+
 def hex_to_pixel(layout, h):
     M = layout.orientation
     size = layout.size
