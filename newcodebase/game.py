@@ -1,5 +1,5 @@
 from board import Board
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Set
 from player import Player, Action
 from collections import defaultdict
 from map import Vertex, Hextile
@@ -7,11 +7,13 @@ import random
 from hexlib import Point, Hex
 import time
 from itertools import combinations
+import pickle
 
 class Game():
     def __init__(self, windowSize: Tuple[int, int], players: List[Player], firstRun: bool=True):
-        self.gamelog: bool = True
+        self.gamelog: bool = False
         self.debug: bool = False
+        self.savegame: bool = False
         self.turn_limit: int = 1000
         self.turn: int = 1
 
@@ -38,6 +40,16 @@ class Game():
 
         # player setup
         self.initialise_players(players)
+    
+    def save_game(self, filepath: str):
+        with open(filepath, 'wb') as file:
+            pickle.dump(self, file)
+
+    @staticmethod
+    def load_game(filepath: str):
+        with open(filepath, 'rb') as file:
+            game = pickle.load(file)
+        return game
     
     def initialise_players(self, players: List[Player]):
         NUMBER_OF_PLAYERS = len(players)
@@ -82,9 +94,9 @@ class Game():
                 
                 possible_actions: List[Action] = self.get_possible_actions(current_colour)
                 # 4. decide and carry out possible action
-                start = time.time()
+                # start = time.time()
                 log = self.decide(current_colour, possible_actions)
-                self.tracker += (time.time() - start)
+                # self.tracker += (time.time() - start)
                 if self.gamelog: print(log)
 
             # 5 if END_TURN then FINISH TURN
@@ -124,6 +136,7 @@ class Game():
         return colour
 
     def finish_turn(self):
+        if self.savegame: self.save_game(f"saves/turn_{self.turn}")
         self.current_player = (self.current_player + 1) % len(self.player_order)
         self.turn += 1
         self.devs_just_purchased.clear()
@@ -409,7 +422,6 @@ class Game():
                     player_resources.extend([resource] * value)
             if player_resources:
                 possible_actions.extend(self.get_possible_player_trades(player_resources))
-        # return possible_actions
 
         can_afford: bool = ( # ROAD
             player.resources["WOOD"] >= 1 and player.resources["BRICK"] >= 1
@@ -464,17 +476,18 @@ class Game():
             player: Player = self.players[colour]
             explored_vertex_coords: List[Point] = []
             owned_edges_ids = player.owned_edges
+            vertex_coords: Set[Point] = set()
             for edge_id in owned_edges_ids:
-                vertex_coords = self.board.edges[edge_id].vertex_neighbors
-                for coord in vertex_coords:
-                    if coord not in explored_vertex_coords:
-                        vertex: Vertex = self.board.vertices[coord]
-                        explored_vertex_coords.append(coord)
-                        if vertex.owner_colour == colour or vertex.owner_colour is None:
-                            potential_edge_id = vertex.edge_neighbors
-                            for id in potential_edge_id:
-                                if not self.board.edges[id].has_road:
-                                    possible_actions.append(Action(action_type, id))
+                vertex_coords.update(self.board.edges[edge_id].vertex_neighbors)
+            for i in range(len(vertex_coords)):
+                coord = vertex_coords.pop()
+                vertex: Vertex = self.board.vertices[coord]
+                explored_vertex_coords.append(coord)
+                if vertex.owner_colour == colour or vertex.owner_colour is None:
+                    potential_edge_id = vertex.edge_neighbors
+                    for id in potential_edge_id:
+                        if not self.board.edges[id].has_road:
+                            possible_actions.append(Action(action_type, id))
             
         return possible_actions
     
@@ -497,8 +510,9 @@ class Game():
         else:
             player: Player = self.players[colour]
             owned_edges_indexes: List[int] = player.owned_edges
+            possible_vertex_coords: Set[Point] = set()
             for index in owned_edges_indexes:
-                possible_vertex_coords: List[Point] = self.board.edges[index].vertex_neighbors
+                possible_vertex_coords.update(self.board.edges[index].vertex_neighbors)
             for coord in possible_vertex_coords:
                 vertex: Vertex = self.board.vertices[coord]
                 all_neighbors_unowned = all(
