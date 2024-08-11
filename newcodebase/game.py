@@ -8,6 +8,7 @@ from hexlib import Point, Hex
 import time
 from itertools import combinations
 import pickle
+from tracker import Tracker
 
 class Game():
     def __init__(self, windowSize: Tuple[int, int], players: List[Player], firstRun: bool=True):
@@ -18,6 +19,9 @@ class Game():
         self.turn: int = 1
 
         self.board = Board(windowSize, self, firstRun=firstRun)
+        self.settlement_phase: bool = True
+        self.first_settlement_phase: bool = True
+        self.second_settlement_phase: bool = False
 
         self.players: Dict[str, Player] = {}
         self.player_order: List[str] = []
@@ -36,7 +40,7 @@ class Game():
         self.largest_army_colour: str = None
         self.longest_road_colour: str = None
 
-        self.tracker: float = 0
+        self.tracker: Tracker = Tracker()
 
         # player setup
         self.initialise_players(players)
@@ -53,22 +57,38 @@ class Game():
     
     def initialise_players(self, players: List[Player]):
         NUMBER_OF_PLAYERS = len(players)
-        colours = ["RED", "WHITE", "ORANGE", "BLUE"]
-        colours = random.sample(colours, len(colours))
 
-        for i in range(NUMBER_OF_PLAYERS):
-            colour = colours[i]
-            self.players[colour] = players.pop(0)
-            self.players[colour].colour = colour
-            self.player_order.append(colour)
+        for _ in range(NUMBER_OF_PLAYERS):
+            new_player = players.pop(0)
+            self.player_order.append(new_player.colour)
+            self.players[new_player.colour] = new_player
         
+        self.player_order = random.sample(self.player_order, NUMBER_OF_PLAYERS)
+
         return
+    
+    def evaluate(self, runner_colour: str) -> int:
+        while not self.is_game_over():
+            current_colour = self.player_order[self.current_player]
+            current_player = self.players[current_colour]
+            possible_actions = self.get_possible_actions(current_colour)
+            chosen_action = current_player.choose_action(possible_actions)
+            self.step(chosen_action)
+        
+        winner_colour = self.tracker.winner
+        
+        if not winner_colour:
+            return 0 # draw
+        elif winner_colour == runner_colour:
+            return 1 # win
+        else:
+            return -1 # loss
 
     def play(self):
         # build initial 2 settlements and 2 roads
         self.initial_settlement_phase()
 
-        while not self.game_over():
+        while not self.is_game_over():
             # 1. START TURN
             current_colour = self.start_turn()
             if self.gamelog: 
@@ -91,12 +111,11 @@ class Game():
             log: str = None
             while log != "END_TURN":
                 # 3. get possible actions
-                
                 possible_actions: List[Action] = self.get_possible_actions(current_colour)
                 # 4. decide and carry out possible action
-                # start = time.time()
-                log = self.decide(current_colour, possible_actions)
-                # self.tracker += (time.time() - start)
+                player: Player = self.players[current_colour]
+                chosen_action: Action = player.choose_action(possible_actions)
+                log = self.step(current_colour, chosen_action)
                 if self.gamelog: print(log)
 
             # 5 if END_TURN then FINISH TURN
@@ -116,14 +135,30 @@ class Game():
                 print(
                     f"{name} ({colour}) TOTAL VPS: {total_vp}, knights played: {knights}, longest road: {longest}, vp cards: {vp_cards}\n"
                     )
+        
+        for colour, player in self.players.items():
+                settlements = 5 - player.settlements_left
+                cities = 4 - player.cities_left
 
-        if self.turn >= self.turn_limit:  
-            return 1, self.tracker
-        return 0, self.tracker
+                self.tracker.settlements_built[colour] = settlements + cities
+                self.tracker.cities_built[colour] = cities
 
-    def game_over(self) -> bool:
+        
+        return self.tracker
+    
+    def game_result(self, colour):
+        if self.tracker.winner == colour:
+            return 1
+        elif self.turn >= self.turn_limit:
+            return 0
+        else:
+            return -1
+
+    def is_game_over(self) -> bool:
         for player in self.players.values():
             if player.victory_points >= 10:
+                self.tracker.winner = player.colour
+                self.tracker.game_length = self.turn
                 return True
 
         if self.turn >= self.turn_limit:
@@ -169,6 +204,7 @@ class Game():
             print("-"*55)
         self.initial_builds(order_backward, distribute=True)
         self.turn += 1
+        self.settlement_phase = False
 
     def initial_builds(self, player_order: List[str], distribute: bool):
         for colour in player_order:
@@ -292,7 +328,6 @@ class Game():
         return f"{colour} traded {give_amount} {give} for 1 {get} with BANK"
 
     def trade_with_players(self, colour: str, trade: Tuple[str, str]) -> str:
-        # start = time.time()
         player: Player = self.players[colour]
         other_players: List[Player] = [p for p in self.players.values() if p != player]
         log: str = ""
@@ -318,7 +353,6 @@ class Game():
 
             log += f"{colour} gave {trade[0]} for {trade[1]}\n"
         
-        # self.tracker += time.time() - start
         return log
     
     def propose_trade(self, receiver: Player, trade: Tuple[str, str]) -> bool:
@@ -333,7 +367,6 @@ class Game():
         return chosen.value
 
     def discard_resources(self) -> str:
-        # start = time.time()
         log: str = ""
         # owner_colour : resource : value]
         discarders_dict: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -358,11 +391,9 @@ class Game():
             for resource, value in resource_dict.items():
                 log += f"{colour} discarded {value} {resource}\n"
         
-        # self.tracker += time.time() - start
         return log     
 
     def distribute_resources(self, total_roll: int=None, coord: Point=None) -> str:
-        # start = time.time()
         # resource : [owner_colour : value]
         receivers_dict: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
 
@@ -406,8 +437,11 @@ class Game():
                     self.bank_resources[resource] -= value
                     player.resources[resource] += value
                     log += f"{owner_colour} has received {value} {resource}\n"
+                    
+                    # tracking resources
+                    if self.turn <= 25:
+                        self.tracker.resources_collected[owner_colour] += value
         
-        # self.tracker += time.time() - start
         return log
 
     def get_possible_actions(self, colour: str) -> List[Action]:
@@ -634,11 +668,8 @@ class Game():
         
         return possible_actions
     
-    def decide(self, colour: str, action_space: List[Action]) -> str:
-        # start = time.time()
+    def step(self, colour: str, chosen_action: Action) -> str:
         player: Player = self.players[colour]
-
-        chosen_action = player.choose_action(action_space)
         # need to check vps for any action that can change them indirectly
         # direct: build settlement, build city, get vp
         # indirect: build road, play knight
@@ -736,5 +767,4 @@ class Game():
             print(action_type)
             raise ValueError("Invalid action type")
 
-        # self.tracker += (time.time() - start)
         return log

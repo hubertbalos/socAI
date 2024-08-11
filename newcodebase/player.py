@@ -6,7 +6,7 @@ from collections import namedtuple
 Action = namedtuple("Action", ["type", "value"])
 
 class Player():
-    def __init__(self, Colour: str=None):
+    def __init__(self, Colour: str):
         self.colour: str = Colour
 
         self.victory_points: int = 0 
