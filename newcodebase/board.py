@@ -5,8 +5,8 @@ from player import Player
 from map import Edge, Vertex
 
 class Board(CatanMap):
-    def __init__(self, windowSize: Tuple[int, int], Game, firstRun: bool=True):
-        super().__init__(mapDimensions=windowSize, firstRun=firstRun)
+    def __init__(self, windowSize: Tuple[int, int], Game):
+        super().__init__(mapDimensions=windowSize)
         self.game = Game
 
     def build_road(self, colour: str, edge_id: int) -> str:

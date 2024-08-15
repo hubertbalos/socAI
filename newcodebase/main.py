@@ -20,6 +20,7 @@ def main():
 
     wins_by_colour: Dict[int] = defaultdict(int)
     game_lengths: List[int] = []
+    ticks: List[int] = []
 
     winner_settlements_built: List[int] = []
     winner_cities_built: List[int] = []
@@ -29,14 +30,18 @@ def main():
     losers_cities_built: List[int] = []
     losers_resources_collected: List[int] = []
 
-    for _ in tqdm(range(1), desc="Simulating games", unit="games/s"):
+    for _ in tqdm(range(100), desc="Simulating games", unit="games/s"):
         start2 = time.time()
         players = [
-            RandomPlayer(Colour="RED"), 
-            RandomPlayer(Colour="WHITE"), 
-            RandomPlayer(Colour="ORANGE"), 
-            RandomPlayer(Colour="BLUE"),
-            # MCTSPlayer(Colour="BLUE", Iterations=100)
+            # RandomPlayer(Colour="RED"), 
+            # RandomPlayer(Colour="WHITE"), 
+            # RandomPlayer(Colour="ORANGE"), 
+
+            WeightedRandomPlayer(Colour="RED"),
+            WeightedRandomPlayer(Colour="WHITE"),
+            WeightedRandomPlayer(Colour="ORANGE"),
+            # RandomPlayer(Colour="BLUE")
+            MCTSPlayer(Colour="BLUE", Iterations=100)
         ]
         game = Game(windowSize=WINDOW_SIZE, players=players)
         tracker: Tracker = game.play()
@@ -45,6 +50,7 @@ def main():
         else:
             wins_by_colour[tracker.winner] += 1
             game_lengths.append(tracker.game_length)
+            ticks.append(tracker.ticks)
 
             # winner
             winner_settlements_built.append(tracker.settlements_built[tracker.winner])
@@ -67,6 +73,7 @@ def main():
             completed_run_time += (time.time() - start2)
 
     print(f"AVERAGE GAME LENGTH: {mean(game_lengths)}")
+    print(f"AVERAGE TICKS: {mean(ticks)}")
     print("WINS BY COLOUR:")
     print(wins_by_colour)
     print(f"WINNER SETTLEMENTS BUILT: {mean(winner_settlements_built)}\n")
@@ -79,7 +86,6 @@ def main():
 
     print("\n")
 
-    print(f"NET Run time: {time.time() - start}")
     print(f"Completed games time: {completed_run_time}")
     print(f"Number of discarded games: {discarded}")
 

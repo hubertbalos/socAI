@@ -39,10 +39,8 @@ class Edge():
 class CatanMap():
     "By default initialises a random Catan map"
 
-    def __init__(self, mapDimensions: Tuple[int, int], firstRun: bool, randomMap: bool=True):
+    def __init__(self, mapDimensions: Tuple[int, int], randomMap: bool=True):
         self.gamelog = False
-
-        self.first_run = firstRun
 
         self.hexes: Dict[Hex, Hextile] = {}
         self.vertices: Dict[Point, Vertex] = {}
@@ -148,7 +146,7 @@ class CatanMap():
         coords = six_coords + eight_coords
 
         for coord in coords:
-            hextile = land_hexes[coord]
+            hextile: Hextile = land_hexes[coord]
             for neighbor in hextile.hex_neighbors:
                 if neighbor in coords:
                     return False

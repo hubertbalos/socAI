@@ -11,17 +11,18 @@ import pickle
 from tracker import Tracker
 
 class Game():
-    def __init__(self, windowSize: Tuple[int, int], players: List[Player], firstRun: bool=True):
+    def __init__(self, windowSize: Tuple[int, int], players: List[Player]):
         self.gamelog: bool = False
         self.debug: bool = False
         self.savegame: bool = False
         self.turn_limit: int = 1000
         self.turn: int = 1
 
-        self.board = Board(windowSize, self, firstRun=firstRun)
-        self.settlement_phase: bool = True
-        self.first_settlement_phase: bool = True
-        self.second_settlement_phase: bool = False
+        self.board = Board(windowSize, self)
+        self.starting_settlement_phase: bool = True
+        self.last_settlement_coord: Point = None
+
+        self.robber_active: bool = False
 
         self.players: Dict[str, Player] = {}
         self.player_order: List[str] = []
@@ -40,6 +41,7 @@ class Game():
         self.largest_army_colour: str = None
         self.longest_road_colour: str = None
 
+        self.mcts_reward: int = 0
         self.tracker: Tracker = Tracker()
 
         # player setup
@@ -68,58 +70,42 @@ class Game():
         return
     
     def evaluate(self, runner_colour: str) -> int:
-        while not self.is_game_over():
+        while not self.game_over():
             current_colour = self.player_order[self.current_player]
             current_player = self.players[current_colour]
             possible_actions = self.get_possible_actions(current_colour)
             chosen_action = current_player.choose_action(possible_actions)
-            self.step(chosen_action)
+            self.step(current_colour, chosen_action)
         
         winner_colour = self.tracker.winner
-        
+        reward = self.mcts_reward
+
         if not winner_colour:
-            return 0 # draw
+            return reward + 0 # draw
         elif winner_colour == runner_colour:
-            return 1 # win
+            return reward + 1 # win
         else:
-            return -1 # loss
+            return reward - 1 # loss
 
     def play(self):
-        # build initial 2 settlements and 2 roads
-        self.initial_settlement_phase()
-
-        while not self.is_game_over():
-            # 1. START TURN
-            current_colour = self.start_turn()
-            if self.gamelog: 
-                print("-"*55)
-                print(f"TURN[{self.turn}] {current_colour} to play")
-                print("-"*55)
-
-            # 2. roll dice and distribute resources
-            dice_roll: Tuple[int, int] = self.roll_dice()
-            if self.gamelog: print(f"{current_colour} has rolled {dice_roll}")
-            total_roll: int = dice_roll[0] + dice_roll[1]
-            if total_roll == 7:
-                log = self.discard_resources()
-                log += self.move_robber_and_rob(current_colour)
-                if self.gamelog: print(log)
+        current_colour = self.player_order[self.current_player]
+        if self.gamelog: 
+            print("-"*55)
+            print(f"TURN[{self.turn}] {current_colour} to play")
+            print("-"*55)
+        
+        while not self.game_over():
+            # get possible actions
+            current_colour = self.player_order[self.current_player]
+            possible_actions: List[Action] = self.get_possible_actions(current_colour)
+            # decide and carry out possible action
+            player: Player = self.players[current_colour]
+            if self.starting_settlement_phase and player.type == "MCTSPlayer":
+                chosen_action: Action = player.choose_action(possible_actions, game=self)
             else:
-                log = self.distribute_resources(total_roll)
-                if self.gamelog: print(log)
-
-            log: str = None
-            while log != "END_TURN":
-                # 3. get possible actions
-                possible_actions: List[Action] = self.get_possible_actions(current_colour)
-                # 4. decide and carry out possible action
-                player: Player = self.players[current_colour]
                 chosen_action: Action = player.choose_action(possible_actions)
-                log = self.step(current_colour, chosen_action)
-                if self.gamelog: print(log)
-
-            # 5 if END_TURN then FINISH TURN
-            self.finish_turn()
+            self.step(current_colour, chosen_action)
+            self.tracker.ticks += 1
 
         if self.gamelog:
             print("-"*55)
@@ -143,18 +129,9 @@ class Game():
                 self.tracker.settlements_built[colour] = settlements + cities
                 self.tracker.cities_built[colour] = cities
 
-        
         return self.tracker
-    
-    def game_result(self, colour):
-        if self.tracker.winner == colour:
-            return 1
-        elif self.turn >= self.turn_limit:
-            return 0
-        else:
-            return -1
 
-    def is_game_over(self) -> bool:
+    def game_over(self) -> bool:
         for player in self.players.values():
             if player.victory_points >= 10:
                 self.tracker.winner = player.colour
@@ -164,28 +141,7 @@ class Game():
         if self.turn >= self.turn_limit:
             return True
         
-        return False
-    
-    def start_turn(self) -> str:
-        colour = self.player_order[self.current_player]
-        return colour
-
-    def finish_turn(self):
-        if self.savegame: self.save_game(f"saves/turn_{self.turn}")
-        self.current_player = (self.current_player + 1) % len(self.player_order)
-        self.turn += 1
-        self.devs_just_purchased.clear()
-        self.devcard_played = 0
-        self.current_trades = 0
-
-        if self.debug: 
-            print("\n")
-            print("BANK")
-            print(self.bank_resources)
-            for player in self.players.values():
-                print(player.colour)
-                print(player.resources)
-            print("\n")
+        return False  
     
     def initial_settlement_phase(self):
         order_forward = self.player_order
@@ -196,6 +152,7 @@ class Game():
             print(f"TURN[{self.turn}]")
             print("-"*55)
         self.initial_builds(order_forward, distribute=False)
+        if self.savegame: self.save_game(f"saves/turn_{self.turn}")
         self.turn += 1
 
         if self.gamelog: 
@@ -203,8 +160,8 @@ class Game():
             print(f"TURN[{self.turn}]")
             print("-"*55)
         self.initial_builds(order_backward, distribute=True)
+        if self.savegame: self.save_game(f"saves/turn_{self.turn}")
         self.turn += 1
-        self.settlement_phase = False
 
     def initial_builds(self, player_order: List[str], distribute: bool):
         for colour in player_order:
@@ -252,32 +209,27 @@ class Game():
         
         return log
     
-    def move_robber_and_rob(self, colour: str) -> str:
+    def move_robber_and_rob(self, colour: str, value: Tuple[Hex, str]) -> str:
         log: str = ""
         player: Player = self.players[colour]
 
-        # moving the robber
-        possible_actions = self.get_possible_robber_locations()
-        chosen_action = player.choose_action(possible_actions)
-        coord: Hex = chosen_action.value
-        log += f"{colour} has moved ROBBER to {coord}\n"
+        coord, loser_colour = value
 
+        # moving the robber
         self.board.hexes[self.board.robber_coord].has_robber = False
         self.board.robber_coord = coord
         self.board.hexes[coord].has_robber = True
+        log += f"{colour} has moved ROBBER to {coord}\n"
 
         # selecting player to rob
-        possible_actions = self.get_possible_players_to_rob(colour, coord)
-        if possible_actions:
-            chosen_action = player.choose_action(possible_actions)
-            loser_colour: str = chosen_action.value
+        if loser_colour:
             loser: Player = self.players[loser_colour]
 
-            resources_availabe: List[str] = []
+            resources_available: List[str] = []
             for resource, value in loser.resources.items():
                 if value > 0:
-                    resources_availabe.extend([resource] * value)
-            random_resource = random.choice(resources_availabe)
+                    resources_available.extend([resource] * value)
+            random_resource = random.choice(resources_available)
 
             player.resources[random_resource] += 1
             loser.resources[random_resource] -= 1
@@ -331,16 +283,14 @@ class Game():
         player: Player = self.players[colour]
         other_players: List[Player] = [p for p in self.players.values() if p != player]
         log: str = ""
-
         possible_trades: List[Action] = []
         for other in other_players:
             result = self.propose_trade(other, trade)
             if result == "ACCEPT_TRADE":
                 possible_trades.append(Action("CONFIRMED_TRADE", other.colour))
-        
+
         if possible_trades:
             selected_trade = player.choose_action(possible_trades)
-            log += f"{colour} TRADING with {selected_trade.value}\n"
             acceptee: Player = self.players[selected_trade.value]
 
             # Update resources for the trade
@@ -351,7 +301,7 @@ class Game():
             acceptee.resources[trade[0]] += 1
 
 
-            log += f"{colour} gave {trade[0]} for {trade[1]}\n"
+            log += f"{colour} gave {trade[0]} to {acceptee} and got {trade[1]}\n"
         
         return log
     
@@ -364,7 +314,7 @@ class Game():
 
         chosen = receiver.choose_action(possible_actions)
 
-        return chosen.value
+        return chosen.type
 
     def discard_resources(self) -> str:
         log: str = ""
@@ -447,6 +397,15 @@ class Game():
     def get_possible_actions(self, colour: str) -> List[Action]:
         possible_actions: List[Action] = [Action("END_TURN", None)]
         player: Player = self.players[colour]
+
+        if self.starting_settlement_phase:
+            if (self.turn % 2) == 1:
+                return self.get_possible_settlements(colour, initial=True)
+            else:
+                return self.get_possible_roads(colour, self.last_settlement_coord)
+
+        if self.robber_active:
+            return self.get_robber_possibilities(colour)
 
         possible_actions.extend(self.get_possible_bank_trades(colour))
         if self.current_trades < self.player_trade_limit:
@@ -605,6 +564,36 @@ class Game():
                 resource_list.extend([resource] * 2)
 
         return set(combinations(resource_list, 2))
+
+    def get_robber_possibilities(self, colour) -> List[Action]:
+        action_type: str = "MOVE_ROBBER_AND_ROB"
+        possible_actions: List[Action] = []
+
+        # Robber locations
+        possible_robber_coords = []
+        # can optimise by splitting sea and land hexes by dict
+        for coord, hextile in self.board.hexes.items():
+            if hextile.resource != "SEA" and not hextile.has_robber:
+                possible_robber_coords.append(coord)
+        
+        for coord in possible_robber_coords:
+            added: bool = False
+            hextile: Hextile = self.board.hexes[coord]
+            vertex_neighbor_coords: List[Point] = hextile.vertex_neighbors
+            for neighbor_vertex in vertex_neighbor_coords:
+                vertex: Vertex = self.board.vertices[neighbor_vertex]
+                # not unowned and not their own vertex
+                if vertex.owner_colour != None and vertex.owner_colour != colour:
+                    # if player has resources to rob
+                    if sum(self.players[vertex.owner_colour].resources.values()) > 0:
+                        value = (coord, vertex.owner_colour)
+                        possible_actions.append(Action(action_type, value))
+                        added: bool = True
+            if not added:
+                value = (coord, None)
+                possible_actions.append(Action(action_type, value))
+        
+        return possible_actions
     
     def get_possible_robber_locations(self) -> List[Action]:
         action_type: str = "MOVE_ROBBER"
@@ -668,7 +657,52 @@ class Game():
         
         return possible_actions
     
-    def step(self, colour: str, chosen_action: Action) -> str:
+    def end_turn(self):
+        if self.savegame: self.save_game(f"saves/turn_{self.turn}")
+        if self.turn <= 16:
+            # on odd turns ie settlements, don't change player
+            if (self.turn % 2) == 1:
+                pass
+            # first settlement phase go forward in player order
+            elif self.turn <= 6:
+                self.current_player = (self.current_player + 1)
+            # on end of both phases don't change current player
+            elif self.turn == 8 or self.turn == 16:
+                pass
+            # second settlement phase go backward in player order
+            else:
+                self.current_player = (self.current_player - 1)
+        else:
+            self.current_player = (self.current_player + 1) % len(self.player_order)
+        
+        self.turn += 1
+        self.devs_just_purchased.clear()
+        self.devcard_played = 0
+        self.current_trades = 0
+
+        current_colour = self.player_order[self.current_player]
+
+        if self.gamelog: 
+            print("\n")
+            print("-"*55)
+            print(f"TURN[{self.turn}] {current_colour} to play")
+            print("-"*55)
+        
+        if self.turn == 17:
+            self.starting_settlement_phase = False
+        
+        if not self.starting_settlement_phase:
+            dice_roll: Tuple[int, int] = self.roll_dice()
+            if self.gamelog: print(f"{current_colour} has rolled {dice_roll}")
+            total_roll: int = dice_roll[0] + dice_roll[1]
+            if total_roll == 7:
+                self.robber_active = True
+                log = self.discard_resources()
+            else:
+                log = self.distribute_resources(total_roll)
+            if self.gamelog: print(log)
+    
+    def step(self, colour: str, chosen_action: Action):
         player: Player = self.players[colour]
         # need to check vps for any action that can change them indirectly
         # direct: build settlement, build city, get vp
@@ -678,27 +712,54 @@ class Game():
 
         if action_type == "END_TURN":
             log = "END_TURN"
+            if self.gamelog: print(log)
+            self.end_turn()
+        
+        elif action_type == "MOVE_ROBBER_AND_ROB":
+            log = self.move_robber_and_rob(colour, value)
+            self.robber_active = False
+            if self.gamelog: print(log)
 
         elif action_type == "BUILD_ROAD":
             log = self.board.build_road(colour, value)
-            player.resources["WOOD"] -= 1
-            player.resources["BRICK"] -= 1
-            self.bank_resources["WOOD"] += 1
-            self.bank_resources["BRICK"] += 1
+            if self.gamelog: print(log)
+            if self.starting_settlement_phase:
+                self.end_turn()
+            else:
+                player.resources["WOOD"] -= 1
+                player.resources["BRICK"] -= 1
+                self.bank_resources["WOOD"] += 1
+                self.bank_resources["BRICK"] += 1
 
         elif action_type == "BUILD_SETTLEMENT":
             log = self.board.build_settlement(colour, value)
-            player.resources["WOOD"] -= 1
-            player.resources["BRICK"] -= 1
-            player.resources["SHEEP"] -= 1
-            player.resources["WHEAT"] -= 1
-            self.bank_resources["WOOD"] += 1
-            self.bank_resources["BRICK"] += 1
-            self.bank_resources["SHEEP"] += 1
-            self.bank_resources["WHEAT"] += 1
+            if self.gamelog: print(log)
+            if self.starting_settlement_phase:
+                if self.turn <= 8:
+                    self.last_settlement_coord = value
+                else:
+                    self.last_settlement_coord = value
+                    log += self.distribute_resources(coord=self.last_settlement_coord)
+                self.end_turn()
+            else:
+                if self.turn <= 25:
+                    print(f"MCTS rewarded for *Settlement*")
+                    self.mcts_reward += 0.5
+                player.resources["WOOD"] -= 1
+                player.resources["BRICK"] -= 1
+                player.resources["SHEEP"] -= 1
+                player.resources["WHEAT"] -= 1
+                self.bank_resources["WOOD"] += 1
+                self.bank_resources["BRICK"] += 1
+                self.bank_resources["SHEEP"] += 1
+                self.bank_resources["WHEAT"] += 1
 
         elif action_type == "BUILD_CITY":
             log = self.board.build_city(colour, value)
+            if self.gamelog: print(log)
+            if self.turn <= 25:
+                print(f"MCTS rewarded for *City*")
+                self.mcts_reward += 0.5
             player.resources["WHEAT"] -= 2
             player.resources["ORE"] -= 3
             self.bank_resources["WHEAT"] += 2
@@ -706,6 +767,7 @@ class Game():
 
         elif action_type == "BUY_DEVCARD":
             log = self.buy_devcard(colour)
+            if self.gamelog: print(log)
             player.resources["WHEAT"] -= 1
             player.resources["ORE"] -= 1
             player.resources["SHEEP"] -= 1
@@ -725,11 +787,12 @@ class Game():
             if locations:
                 action = player.choose_action(locations)
                 log += self.board.build_road(colour, action.value)
+            if self.gamelog: print(log)
 
         elif action_type == "PLAY_KNIGHT":
             self.devcard_played = True
+            self.robber_active = True
             log = f"{colour} has played KNIGHT\n"
-            log += self.move_robber_and_rob(colour)
             player.development_cards["KNIGHT"] -= 1
             player.knights_played += 1
             if player.knights_played >= 3:
@@ -743,28 +806,31 @@ class Game():
                 else:
                     self.largest_army_colour = colour
                     player.victory_points += 2
+            if self.gamelog: print(log)
         
         elif action_type == "PLAY_MONOPOLY":
             self.devcard_played = True
             log = f"{colour} has played MONOPOLY\n"
             log += self.play_monopoly(colour, value)
             player.development_cards["MONOPOLY"] -= 1
+            if self.gamelog: print(log)
 
         elif action_type == "PLAY_YEAR_OF_PLENTY":
             self.devcard_played = True
             log = f"{colour} has played YEAR_OF_PLENTY\n"
             log += self.play_year_of_plenty(colour, value)
             player.development_cards["YEAR_OF_PLENTY"] -= 1
+            if self.gamelog: print(log)
 
         elif action_type == "TRADE_WITH_BANK":
             log = self.trade_with_bank(colour, value)
+            if self.gamelog and log != "": print(log)
 
         elif action_type == "TRADE_WITH_PLAYER":
             self.current_trades += 1
             log = self.trade_with_players(colour, value)
+            if self.gamelog and log != "": print(log)
 
         else:
             print(action_type)
             raise ValueError("Invalid action type")
-
-        return log
