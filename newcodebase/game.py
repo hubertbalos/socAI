@@ -15,6 +15,7 @@ class Game():
         self.gamelog: bool = False
         self.debug: bool = False
         self.savegame: bool = False
+        self.reward: bool = False
         self.turn_limit: int = 1000
         self.turn: int = 1
 
@@ -35,7 +36,7 @@ class Game():
         self.devcard_played: bool = False
         self.devs_just_purchased: List[str] = []
 
-        self.player_trade_limit: int = 3
+        self.player_trade_limit: int = 1
         self.current_trades: int = 0
 
         self.largest_army_colour: str = None
@@ -78,14 +79,15 @@ class Game():
             self.step(current_colour, chosen_action)
         
         winner_colour = self.tracker.winner
-        reward = self.mcts_reward
+        reward = 0
+        if self.reward: reward += self.mcts_reward * 0.5
 
         if not winner_colour:
-            return reward + 0 # draw
+            return 0 # draw
         elif winner_colour == runner_colour:
-            return reward + 1 # win
+            return reward +1 # win
         else:
-            return reward - 1 # loss
+            return -1 # loss
 
     def play(self):
         current_colour = self.player_order[self.current_player]
@@ -203,7 +205,7 @@ class Game():
 
         card: str = ""
         if self.debug: card = gained_devcard
-        log = f"{colour} has bought a DEVCARD {card}"
+        log = f"{colour} has bought a DEVCARD"
         if gained_devcard != "VICTORY_POINT":
             self.devs_just_purchased.append(gained_devcard)
         
@@ -742,9 +744,12 @@ class Game():
                     log += self.distribute_resources(coord=self.last_settlement_coord)
                 self.end_turn()
             else:
-                if self.turn <= 25:
-                    print(f"MCTS rewarded for *Settlement*")
-                    self.mcts_reward += 0.5
+                if not self.tracker.first_building_turn_built:
+                    self.tracker.first_building_turn_built = self.turn
+                if self.reward:
+                    if self.turn <= 24 and self.mcts_reward == 0:
+                        print(f"MCTS rewarded for *Settlement*")
+                        self.mcts_reward += 1
                 player.resources["WOOD"] -= 1
                 player.resources["BRICK"] -= 1
                 player.resources["SHEEP"] -= 1
@@ -757,9 +762,12 @@ class Game():
         elif action_type == "BUILD_CITY":
             log = self.board.build_city(colour, value)
             if self.gamelog: print(log)
-            if self.turn <= 25:
-                print(f"MCTS rewarded for *City*")
-                self.mcts_reward += 0.5
+            if not self.tracker.first_building_turn_built:
+                    self.tracker.first_building_turn_built = self.turn
+            if self.reward:
+                if self.turn <= 24 and self.mcts_reward == 0:
+                    print(f"MCTS rewarded for *City*")
+                    self.mcts_reward += 1
             player.resources["WHEAT"] -= 2
             player.resources["ORE"] -= 3
             self.bank_resources["WHEAT"] += 2

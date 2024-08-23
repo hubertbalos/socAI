@@ -121,3 +121,73 @@ print(f"Execution time: {elapsed_time} seconds")
 #             possible_actions.append(Action(action_type, trade))
         
 #         return possible_actions
+
+
+
+
+
+
+
+# WINDOW_SIZE = (750, 910)
+    # start = time.time()
+    # discarded = 0
+    # completed_run_time = 0
+
+    # wins_by_colour: Dict[int] = defaultdict(int)
+    # game_lengths: List[int] = []
+    # ticks: List[int] = []
+
+    # winner_settlements_built: List[int] = []
+    # winner_cities_built: List[int] = []
+    # winner_resources_collected: List[int] = []
+
+    # losers_settlements_built: List[int] = []
+    # losers_cities_built: List[int] = []
+    # losers_resources_collected: List[int] = []
+
+    # for _ in tqdm(range(100), desc="Simulating games", unit="games/s"):
+    #     start2 = time.time()
+    #     players = [
+    #         # RandomPlayer(Colour="RED"), 
+    #         # RandomPlayer(Colour="WHITE"), 
+    #         # RandomPlayer(Colour="ORANGE"), 
+    #         # RandomPlayer(Colour="BLUE"),
+
+    #         # WeightedRandomPlayer(Colour="RED"),
+    #         # WeightedRandomPlayer(Colour="WHITE"),
+    #         # WeightedRandomPlayer(Colour="ORANGE"),
+
+    #         MCTSPlayer(Colour="RED", Iterations=100, Pruning=False, Reward=False),
+    #         MCTSPlayer(Colour="WHITE", Iterations=100, Pruning=False, Reward=True),
+    #         MCTSPlayer(Colour="ORANGE", Iterations=100, Pruning=True, Reward=False),
+
+    #         MCTSPlayer(Colour="BLUE", Iterations=100, Pruning=True, Reward=True),
+    #     ]
+    #     game = Game(windowSize=WINDOW_SIZE, players=players)
+    #     tracker: Tracker = game.play()
+    #     if tracker.winner is None:
+    #         discarded += 1
+    #     else:
+    #         wins_by_colour[tracker.winner] += 1
+    #         game_lengths.append(tracker.game_length)
+    #         ticks.append(tracker.ticks)
+
+    #         # winner
+    #         winner_settlements_built.append(tracker.settlements_built[tracker.winner])
+    #         winner_cities_built.append(tracker.cities_built[tracker.winner])
+    #         winner_resources_collected.append(tracker.resources_collected[tracker.winner])
+
+    #         # losers
+    #         for colour, built in tracker.settlements_built.items():
+    #             if colour != tracker.winner:
+    #                 losers_settlements_built.append(built)
+
+    #         for colour, built in tracker.cities_built.items():
+    #             if colour != tracker.winner:
+    #                 losers_cities_built.append(built)
+            
+    #         for colour, collected in tracker.resources_collected.items():
+    #             if colour != tracker.winner:
+    #                 losers_resources_collected.append(collected)
+
+    #         completed_run_time += (time.time() - start2)

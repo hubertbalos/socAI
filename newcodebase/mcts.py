@@ -5,12 +5,13 @@ from player import Player, Action
 from game import Game
 from typing import List
 from copy import deepcopy
-from statistics import median, mean
+from statistics import median
 
 class Node():
-    def __init__(self, state, parent=None, action=None):
+    def __init__(self, state, parent=None, action=None, pruning=None):
         self.state: Game = state
         self.parent: Node = parent
+        self.pruning: bool = pruning
         self.children: List[Node] = []
         self.action: Action = action
         self.untried_actions: List[Action] = self.get_untried_actions()
@@ -20,8 +21,9 @@ class Node():
     def get_untried_actions(self):
         current_colour = self.state.player_order[self.state.current_player]
         possible_actions = self.state.get_possible_actions(current_colour)
-        if self.parent is None and (self.state.turn % 2) == 1:
-            possible_actions = self.placement_prune_actions(possible_actions)
+        if self.pruning:
+            if self.parent is None and (self.state.turn % 2) == 1:
+                possible_actions = self.placement_prune_actions(possible_actions)
         return possible_actions
     
     def is_fully_expanded(self):
@@ -31,7 +33,7 @@ class Node():
     def is_terminal(self):
         return self.state.game_over()
 
-    def best_child(self, exploration_param=1.4):
+    def best_child(self, exploration_param=0.75):
         choices_weights = [
             (child.value / child.visits) + exploration_param * np.sqrt(np.log(self.visits) / child.visits)
             for child in self.children
@@ -77,10 +79,12 @@ class MCTSPlayer(Player):
     """
     type = "MCTSPlayer"
 
-    def __init__(self, Colour, Iterations: int=1000):
+    def __init__(self, Colour, Iterations: int=1000, Pruning: bool=True, Reward: bool=True):
         super().__init__(Colour)
         self.iterations = Iterations
         self.colour = Colour
+        self.pruning = Pruning
+        self.reward = Reward
 
     def choose_action(self, possible_actions, game: Game=None):
         # If only one action then just return it
@@ -100,7 +104,7 @@ class MCTSPlayer(Player):
         # MCTS
         start = time.time()
 
-        root = Node(game)
+        root = Node(game, pruning=self.pruning)
         for _ in range(self.iterations):
             node = self.select(root)
             if not node.is_terminal():
@@ -109,7 +113,6 @@ class MCTSPlayer(Player):
             self.backpropagate(node, reward)
 
         print(f"MCTS completed in {time.time() - start}")
-        
         return root.best_child(exploration_param=0).action
 
     def select(self, node: Node):
@@ -129,6 +132,7 @@ class MCTSPlayer(Player):
         new_state.gamelog = False
         new_state.debug = False
         new_state.savegame = False
+        new_state.reward = self.reward
         new_state.turn_limit = 1000
         # -----------------------------------------
         current_colour = new_state.player_order[new_state.current_player]
