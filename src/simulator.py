@@ -1,16 +1,22 @@
-from game import Game
-from player import RandomPlayer, WeightedRandomPlayer
-from tracker import Tracker
 import time
 from statistics import mean 
 from tqdm import tqdm
-from mcts import MCTSPlayer
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 
-WINDOW_SIZE = (750, 910)
-USE_MULTIPROCESSING = True
-TOTAL_GAMES = 10000
+from game import Game
+from player import RandomPlayer, WeightedRandomPlayer
+from tracker import Tracker
+
+from ml.mcts import MCTSPlayer
+
+# --------------------------------- SIMULATION SETTINGS -------------------------------
+WINDOW_SIZE = (750, 910) # pygame window size
+USE_MULTIPROCESSING = True 
+TOTAL_GAMES = 1000
+GAMELOG = False # print game events to console
+DEBUG = False # print additional game information not typical visible
+SAVEGAME = False # turn on to view games using pygame UI
 
 def simulate_game(i):
     players = [
@@ -29,8 +35,8 @@ def simulate_game(i):
         # MCTSPlayer(Colour="ORANGE", Iterations=1000, Pruning=True, Reward=False),
         # MCTSPlayer(Colour="BLUE", Iterations=1000, Pruning=True, Reward=True),
     ]
-    
-    game = Game(windowSize=WINDOW_SIZE, players=players)
+# -------------------------------------------------------------------------------------
+    game = Game(windowSize=WINDOW_SIZE, players=players, gamelog=GAMELOG, debug=DEBUG, savegame=SAVEGAME)
     tracker: Tracker = game.play()
     
     result = {
@@ -70,12 +76,12 @@ def main(use_multiprocessing=False):
 
     start = time.time()
     if use_multiprocessing:
-        print(f"CPU cores: {multiprocessing.cpu_count()}")
+        print(f"CPU cores in use: {multiprocessing.cpu_count()}")
         with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
             futures = [executor.submit(simulate_game, i) for i in range(total_games)]
 
             try:
-                for future in tqdm(as_completed(futures), total=total_games, desc="Simulating games", unit="games"):
+                for future in tqdm(as_completed(futures), total=total_games, desc=f"Simulating games:", bar_format="{desc} |{bar}| {n_fmt}/{total_fmt} {remaining}"):
                     result, game = future.result()
 
                     if result['winner'] is None:
@@ -106,7 +112,7 @@ def main(use_multiprocessing=False):
                 raise
     else:
         # Run simulations sequentially
-        for i in tqdm(range(total_games), desc="Simulating games", unit="games/s"):
+        for i in tqdm(range(total_games), total=total_games, desc=f"Simulating games:", bar_format="{desc} |{bar}| {n_fmt}/{total_fmt} {remaining}"):
             result, game = simulate_game(i)
 
             if result['winner'] is None:
@@ -130,26 +136,26 @@ def main(use_multiprocessing=False):
 
     run_time = time.time() - start
 
-    # print("\n")
+    print("\n")
 
-    # print(f"AVERAGE GAME LENGTH: {mean(game_lengths):.2f} turns")
-    # print(f"AVERAGE TICKS: {mean(ticks):.2f} ticks\n")
-    # print("WINS BY COLOUR:")
-    # print(f"{wins_by_colour}\n")
-    # print(f"TURN FIRST BUILDING BUILT: {mean(first_building_turn_built):.2f}\n")
-    # print(f"WINNER SETTLEMENTS BUILT: {mean(winner_settlements_built):.2f}\n")
-    # print(f"WINNER CITIES BUILT: {mean(winner_cities_built):.2f}\n")
-    # print(f"WINNER RESOURCES COLLECTED: {mean(winner_resources_collected):.2f}\n")
-    # print(f"WINNER DEVCARDS PURCHASED: {mean(winner_dev_cards_purchased):.2f}\n")
-    # print(f"LOSERS SETTLEMENTS BUILT: {mean(losers_settlements_built):.2f}\n")
-    # print(f"LOSERS CITIES BUILT: {mean(losers_cities_built):.2f}\n")
-    # print(f"LOSERS RESOURCES COLLECTED: {mean(losers_resources_collected):.2f}\n")
-    # print(f"LOSERS DEVCARDS PURCHASED: {mean(losers_dev_cards_purchased):.2f}\n")
+    print(f"AVERAGE GAME LENGTH: {mean(game_lengths):.2f} turns")
+    print(f"AVERAGE TICKS: {mean(ticks):.2f} ticks\n")
+    print("WINS BY COLOUR:")
+    print(f"{wins_by_colour}\n")
+    print(f"TURN FIRST BUILDING BUILT: {mean(first_building_turn_built):.2f}\n")
+    print(f"WINNER SETTLEMENTS BUILT: {mean(winner_settlements_built):.2f}\n")
+    print(f"WINNER CITIES BUILT: {mean(winner_cities_built):.2f}\n")
+    print(f"WINNER RESOURCES COLLECTED: {mean(winner_resources_collected):.2f}\n")
+    print(f"WINNER DEVCARDS PURCHASED: {mean(winner_dev_cards_purchased):.2f}\n")
+    print(f"LOSERS SETTLEMENTS BUILT: {mean(losers_settlements_built):.2f}\n")
+    print(f"LOSERS CITIES BUILT: {mean(losers_cities_built):.2f}\n")
+    print(f"LOSERS RESOURCES COLLECTED: {mean(losers_resources_collected):.2f}\n")
+    print(f"LOSERS DEVCARDS PURCHASED: {mean(losers_dev_cards_purchased):.2f}\n")
 
-    # print("\n")
+    print("\n")
 
-    # print(f"Run time: {run_time:.2f} seconds")
-    # print(f"Number of discarded games: {discarded}")
+    print(f"Run time: {run_time:.2f} seconds")
+    print(f"Number of discarded games: {discarded}")
 
     print("\n")
 
@@ -157,36 +163,36 @@ def main(use_multiprocessing=False):
 
 if __name__ == "__main__":
     game = main(use_multiprocessing=USE_MULTIPROCESSING)
-    import pygame
-    from renderer import Renderer
-    # Render loop
+    if SAVEGAME:
+        import pygame
+        from renderer import Renderer
+        # Render loop
+        pygame.init()
+        renderer = Renderer(windowSize=WINDOW_SIZE, game=game)
 
-    pygame.init()
-    renderer = Renderer(windowSize=WINDOW_SIZE, game=game)
+        renderer.display()
+        lower_limit = 1
+        upper_limit = game.turn-1
 
-    renderer.display()
-    lower_limit = 1
-    upper_limit = game.turn-1
+        running = True
+        while running:
 
-    running = True
-    while running:
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if game.savegame:
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT:
-                        if game.turn > lower_limit:
-                            game.turn -= 1
-                            new_game = Game.load_game(f"saves/turn_{game.turn}")
-                            renderer.display_game = new_game
-                            renderer.display()
-                    elif event.key == pygame.K_RIGHT:
-                        if game.turn < upper_limit:
-                            game.turn += 1
-                            new_game = Game.load_game(f"saves/turn_{game.turn}")
-                            renderer.display_game = new_game
-                            renderer.display()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if game.savegame:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_LEFT:
+                            if game.turn > lower_limit:
+                                game.turn -= 1
+                                new_game = Game.load_game(f"saves/turn_{game.turn}")
+                                renderer.display_game = new_game
+                                renderer.display()
+                        elif event.key == pygame.K_RIGHT:
+                            if game.turn < upper_limit:
+                                game.turn += 1
+                                new_game = Game.load_game(f"saves/turn_{game.turn}")
+                                renderer.display_game = new_game
+                                renderer.display()
     
-    pygame.quit()
+        pygame.quit()

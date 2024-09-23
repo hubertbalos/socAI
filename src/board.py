@@ -1,8 +1,9 @@
+from typing import Tuple, Set
+
 from hexlib import Point
 from map import CatanMap
-from typing import Tuple, Set
 from player import Player
-from map import Edge, Vertex
+from map import Edge
 
 class Board(CatanMap):
     def __init__(self, windowSize: Tuple[int, int], Game):

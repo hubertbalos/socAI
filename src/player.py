@@ -1,11 +1,15 @@
 import random
-from hexlib import Point
 from typing import List
 from collections import namedtuple
+
+from hexlib import Point
 
 Action = namedtuple("Action", ["type", "value"])
 
 class Player():
+    """
+    Player class skeleton
+    """
     def __init__(self, Colour: str):
         self.colour: str = Colour
 

@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
-from hexlib import *
 import time
 import random
 import math
+
+from hexlib import *
 
 @dataclass
 class Hextile():

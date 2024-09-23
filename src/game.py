@@ -1,21 +1,25 @@
-from board import Board
 from typing import Tuple, Dict, List, Set
-from player import Player, Action
 from collections import defaultdict
-from map import Vertex, Hextile
 import random
-from hexlib import Point, Hex
 from itertools import combinations
 import pickle
+
+from map import Vertex, Hextile
+from board import Board
+from player import Player, Action
+from hexlib import Point, Hex
 from tracker import Tracker
 
 class Game():
-    def __init__(self, windowSize: Tuple[int, int], players: List[Player]):
-        self.gamelog: bool = False
-        self.debug: bool = False
-        self.savegame: bool = False
+    """
+    Settlers of Catan game logic from zero to hero
+    """
+    def __init__(self, windowSize: Tuple[int, int], players: List[Player], gamelog: bool, debug :bool, savegame :bool):
+        self.gamelog: bool = gamelog
+        self.debug: bool = debug
+        self.savegame: bool = savegame
         self.reward: bool = False
-        self.turn_limit: int = 20
+        self.turn_limit: int = 1000
         self.turn: int = 1
 
         self.board = Board(windowSize, self)

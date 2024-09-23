@@ -1,8 +1,9 @@
 import pygame
-from game import Game
-from hexlib import *
 from typing import Tuple
 import os
+
+from hexlib import *
+from game import Game
 
 class Renderer():
     """

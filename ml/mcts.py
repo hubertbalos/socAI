@@ -1,17 +1,20 @@
 import numpy as np
 import random
 import time
-from player import Player, Action
-from game import Game
 from typing import List
 from copy import deepcopy
 from statistics import median
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+from src.player import Player, Action
+from src.game import Game
+
+# BASE SETTINGS
 USE_ENSEMBLE = False
 EXPLORATION_PARAM = 0.75
 
 class Node():
+    "Node for Monte Carlo Search Tree"
     def __init__(self, state, parent=None, action=None, pruning=None):
         self.state: Game = state
         self.parent: Node = parent
@@ -53,6 +56,7 @@ class Node():
         return child_node
     
     def placement_prune_actions(self, possible_actions: List[Action]):
+        "Removes unfavourable actions from possible actions"
         PIP_NUMBER_DICT = {2:1, 3:2, 4:3, 5:4, 6:5, 8:5, 9:4, 10:3, 11:2, 12:1}
 
         pip_dict: List[int] = {}
@@ -131,6 +135,7 @@ class MCTSPlayer(Player):
         return root.best_child(exploration_param=0).action
     
     def run_mcts(self, root):
+        "Runs a Monte Carlo Tree Search and returns the root"
         for _ in range(self.iterations):
             node = self.select(root)
             if not node.is_terminal():
@@ -140,6 +145,7 @@ class MCTSPlayer(Player):
         return root
     
     def merge_trees(self, root: Node, other_root: Node):
+        "Merger function which combines two search trees at the root"
         for other_child in other_root.children:
             match = False
             for root_child in root.children:
