@@ -1,5 +1,5 @@
-# Saves
-newcodebase/saves/
+# Savegame files
+src/saves/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
