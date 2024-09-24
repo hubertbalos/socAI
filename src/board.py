@@ -6,6 +6,9 @@ from player import Player
 from map import Edge
 
 class Board(CatanMap):
+    """
+    Board implementation for Settlers of Catan
+    """
     def __init__(self, windowSize: Tuple[int, int], Game):
         super().__init__(mapDimensions=windowSize)
         self.game = Game

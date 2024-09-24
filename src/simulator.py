@@ -166,6 +166,7 @@ if __name__ == "__main__":
     if SAVEGAME:
         import pygame
         from renderer import Renderer
+        
         # Render loop
         pygame.init()
         renderer = Renderer(windowSize=WINDOW_SIZE, game=game)
